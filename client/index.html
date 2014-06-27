@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>CollEdit</title>
+
+    <link href="resources/css/main.css" rel="stylesheet"/>
+
+    <script type="text/javascript" src="resources/js/libs/lodash-v2.4.1.js"></script>
+    <script type="text/javascript" src="resources/js/libs/angular-1.2.16.js"></script>
+    <script type="text/javascript" src="resources/js/libs/d3-v3.4.7.js"></script>
+    <script type="text/javascript" src="resources/js/libs/lawnchair-0.6.1.js"></script>
+
+    <script type="text/javascript" src="resources/js/mainApp.js"></script>
+    <script type="text/javascript" src="resources/js/services/persistenceServices.js"></script>
+    <script type="text/javascript" src="resources/js/services/dataServices.js"></script>
+    <script type="text/javascript" src="resources/js/services/ioServices.js"></script>
+    <script type="text/javascript" src="resources/js/services/d3Services.js"></script>
+    <script type="text/javascript" src="resources/js/controllers/controllers.js"></script>
+    <script type="text/javascript" src="resources/js/directives/directives.js"></script>
+</head>
+<body ng-app="colledit" ng-controller="CollEditController">
+    <colledit-page></colledit-page>
+    <div class="controls">
+        <div class="addControls">
+            Add element of type:
+            <span class="elementTypeToAdd" ng-class="{elementTypeToAddSelected: nextPageElementType == 'svgText'}"
+                  ng-click="setNextPageElementType('svgText')">SVG text</span>
+            <span class="elementTypeToAdd" ng-class="{elementTypeToAddSelected: nextPageElementType == 'svgCircle'}"
+                  ng-click="setNextPageElementType('svgCircle')">SVG circle</span>
+            <span class="elementTypeToAdd" ng-class="{elementTypeToAddSelected: nextPageElementType == 'svgRect'}"
+                  ng-click="setNextPageElementType('svgRect')">SVG rectangle</span>
+        </div>
+        <div class="modifyControls" ng-show="selectedPageElement">
+            <hr />
+            Modify selected element:
+            <div class="updateControls">
+                <div class="generalUpdateControls">
+                    <button class="changeColorPageElement" ng-click="togglePageElementProperty('fill')">Toggle color</button>
+                    <button class="changeSizePageElement" ng-click="togglePageElementSize()">Toggle size</button>
+                </div>
+                <div class="textualUpdateControls" ng-show="isTextualPageElement()">
+                    <hr />
+                    <button class="changeContentsPageElement" ng-click="displayTextContentsInputDialog()">Change contents</button><br />
+                    <button class="changeFontStylePageElement" ng-click="togglePageElementProperty('fontStyle')">Toggle font style</button>
+                    <button class="changeFontWeightPageElement" ng-click="togglePageElementProperty('fontWeight')">Toggle font weight</button>
+                    <button class="changeTextDecorationPageElement" ng-click="togglePageElementProperty('textDecoration')">Toggle text decoration</button>
+                </div>
+            </div>
+            <hr />
+            <div class="deleteControls">
+                <button class="deletePageElement" ng-click="deletePageElement()">Delete selected</button>
+            </div>
+        </div>
+        <hr />
+        <div class="otherControls">
+            <button class="deleteAllPageElements" ng-click="deleteAllPageElements()">Clear all</button>
+        </div>
+    </div>
+    <div class="textContentsInputDialog" ng-style="textContentsInputDialogStyle">
+        Text contents: <input type="text" ng-model="textContentsInput" /><br />
+        <button ng-click="changeTextPageElementsContents()">Update</button>
+    </div>
+	<script src="/socket.io/socket.io.js"></script>
+</body>
+</html>

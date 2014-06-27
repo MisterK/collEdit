@@ -1,0 +1,33 @@
+- WebRTC/socketio
+- Versioning
+- More element types
+    -> image
+    -> non-SVG mode
+- Keyboard shortcuts
+
+DONE
+---------
+- select element by clicking on it
+- insert element at position: underlying giant background element to capture clicks
+    -> text
+    -> circle
+    -> rectangle
+- delete button
+- Local storage
+- change attributes by button
+    -> all
+        => color
+        => size / font-size / width & height
+    -> text
+        => contents
+        => font-style
+        => font-weight
+        => text-decoration
+
+
+BUGS
+----------
+- Exit animation not always applied?
+- Use deep collection watch instead of events
+- Fix PageElement prototype inheritance
+- Delete all doesn't clear browser's local storage

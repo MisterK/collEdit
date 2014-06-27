@@ -1,0 +1,62 @@
+.colleditPageDiv {
+    float: left;
+}
+
+.colleditPageSvg {
+    opacity: 1;
+}
+
+.clickableBackground {
+    fill: grey;
+    stroke: black;
+    stroke-width: 1;
+}
+
+.pageElement {
+
+}
+
+.elementTypeToAdd {
+    border: 1px solid black;
+    padding: 2px;
+    margin-right: 3px;
+}
+
+.elementTypeToAdd:hover {
+    cursor: pointer;
+}
+
+.elementTypeToAddSelected {
+    color: red;
+}
+
+.controls {
+    float: left;
+    margin-left: 5px;
+    text-align: center;
+}
+
+.addControls {
+}
+
+.modifyControls {
+}
+
+.updateControls {
+}
+
+.generalUpdateControls {
+
+}
+
+.deleteControls {
+}
+
+.textContentsInputDialog {
+    position: absolute;
+    z-index: 1000;
+    border: 1px solid black;
+    background-color: white;
+    text-align: center;
+    padding: 3px;
+}
