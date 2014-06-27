@@ -39,32 +39,32 @@ angular.module('colledit.ioAngularServices', [])
 
             this.getPageElement = function(pageElementKey, successCallback, errorCallback) {
                 $http.get('/pageElement/' + pageElementKey)
-                    .success(successCallback)
-                    .error(errorCallback);
+                    .success(successCallback || new Function())
+                    .error(errorCallback || new Function());
             };
 
             this.listPageElements = function(successCallback, errorCallback) {
                 $http.get('/pageElements')
-                    .success(successCallback)
-                    .error(errorCallback);
+                    .success(successCallback || new Function())
+                    .error(errorCallback || new Function());
             };
 
             this.savePageElement = function(pageElement, successCallback, errorCallback) {
                 $http.post('/pageElement', pageElement)
-                    .success(successCallback)
-                    .error(errorCallback);
+                    .success(successCallback || new Function())
+                    .error(errorCallback || new Function());
             };
 
             this.deletePageElement = function(pageElement, successCallback, errorCallback) {
                 $http.delete('/pageElement/' + pageElement.key)
-                    .success(successCallback)
-                    .error(errorCallback);
+                    .success(successCallback || new Function())
+                    .error(errorCallback || new Function());
             };
 
             this.deleteAllPageElements = function(successCallback, errorCallback) {
                 $http.delete('/pageElements')
-                    .success(successCallback)
-                    .error(errorCallback);
+                    .success(successCallback || new Function())
+                    .error(errorCallback || new Function());
             };
         }
     });
