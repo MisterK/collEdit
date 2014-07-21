@@ -7,6 +7,7 @@ var port = 3000,
     _ = require('./client/resources/js/libs/lodash-v2.4.1'),
 	pageElements = {};
 
+//Read server port from input args
 _(process.argv)
 	.map(function (arg) { return arg.indexOf('port=') == 0 ?
 			arg.substring('port='.length, arg.length) : undefined })
@@ -15,30 +16,27 @@ _(process.argv)
 	.forEach(function(finalPort) { if (!_.isUndefined(finalPort)) port = finalPort; });
 console.log('port ', port);
 
+//Request and responses body as JSON
 app.use(bodyParser.json());
 
+//Server main page
 app.get('/', function (req, res) {
     res.sendfile(__dirname + '/client/index.html');
 });
 
+//Serve resources
 app.use('/resources', express.static(__dirname + "/client/resources"));
 
+/************** Data management functions **************/
+
 var savePageElement = function(pageElementToSave) {
-    pageElements[pageElementToSave.id] = pageElementToSave;
+    pageElements[pageElementToSave.pageElementId] = pageElementToSave;
     return true;
 };
 
-var updatePageElement = function(pageElementToUpdate) {
-    if (getPageElement(pageElementToUpdate.id)) {
-        pageElements[pageElementToUpdate.id] = pageElementToUpdate;
-        return true;
-    }
-    return false;
-};
-
-var deletePageElement = function(pageElementToDelete) {
-    if (getPageElement(pageElementToDelete.id)) {
-        delete pageElements[pageElementToDelete.id];
+var deletePageElement = function(pageElementToDeleteId) {
+    if (getPageElement(pageElementToDeleteId)) {
+        delete pageElements[pageElementToDeleteId];
         return true;
     }
     return false;
@@ -61,10 +59,10 @@ var getPageElement = function(pageElementId) {
     return getAllPageElements()[pageElementId];
 };
 
-/* SocketIO part*/
+/*********** SocketIO part **************/
 
 io.sockets.on('connection', function (socket) {
-	socket.emit('allPageElements', getAllPageElements());
+	socket.emit('allPageElements', _.values(getAllPageElements()));
 
 	socket.on('savePageElement', function (pageElementToSave) {
 		if (savePageElement(pageElementToSave)) {
@@ -72,18 +70,24 @@ io.sockets.on('connection', function (socket) {
 		}
 	})
 	.on('deletePageElement', function (pageElementToDelete) {
-		if (deletePageElement(pageElementToDelete)) {
+		if (deletePageElement(pageElementToDelete.pageElementId)) {
 			io.sockets.emit('pageElementDeleted', pageElementToDelete);
 		}
 	})
+    .on('deleteAllPageElements', function () {
+        if (deleteAllPageElements()) {
+            io.sockets.emit('allPageElementsDeleted', pageElementToDelete);
+        }
+    })
 	.on('disconnect', function(){
         //TODO
     });
 });
 
-/* HTTP part */
+/*************** HTTP part ***************/
+
 app.get('/pageElements', function(req, res) {
-    res.json(getAllPageElements());
+    res.json(_.values(getAllPageElements()));
 });
 
 app.get('/pageElement/:pageElementId', function(req, res) {
@@ -91,18 +95,29 @@ app.get('/pageElement/:pageElementId', function(req, res) {
 });
 
 app.post('/pageElement', function(req, res) {
-    var status = savePageElement(req.body) ? 200 : 400;
-    res.send(status);
+    var pageElementToSave = req.body;
+    var pageElementSaved = savePageElement(pageElementToSave);
+    if (pageElementSaved) {
+        io.sockets.emit('pageElementSaved', pageElementToSave);
+    }
+    res.send(pageElementSaved ? 200 : 400);
 });
 
 app.delete('/pageElement/:pageElementId', function(req, res) {
-    var status = deletePageElement(req.params.pageElementId) ? 200 : 400;
-    res.send(status);
+    var pageElementToDeleteId = req.params.pageElementId;
+    var pageElementDeleted = deletePageElement(pageElementToDeleteId);
+    if (pageElementDeleted) {
+        io.sockets.emit('pageElementDeleted', pageElementToDeleteId);
+    }
+    res.send(pageElementDeleted ? 200 : 400);
 });
 
 app.delete('/pageElements', function(req, res) {
-    var status = deleteAllPageElements() ? 200 : 400;
-    res.send(status);
+    var allPageElementsDeleted = deleteAllPageElements();
+    if (allPageElementsDeleted) {
+        io.sockets.emit('allPageElementsDeleted');
+    }
+    res.send(allPageElementsDeleted ? 200 : 400);
 });
 
 server.listen(port);

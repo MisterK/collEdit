@@ -4,8 +4,8 @@
 
 angular.module('colledit.ioAngularServices', [])
     .service('serverCommunicationService', function($http, $window) {
-        this.getServerConnection = function(registerEventHandlerDescriptors) {
-            return new ServerConnection().connectToServerEventsWithListeners(registerEventHandlerDescriptors);
+        this.getServerConnection = function() {
+            return new ServerConnection();
         };
 
         function ServerConnection() {
@@ -22,10 +22,8 @@ angular.module('colledit.ioAngularServices', [])
                     'force new connection': true,
                     query: undefined
                 });
-                _.forEach(registerEventHandlerDescriptors, function(eventHandlerDescriptor) {
-                    var eventType = eventHandlerDescriptor[0];
-                    var eventHandlerFunction = eventHandlerDescriptor[1];
-                    socket.on(eventType, function (serverResponse) {
+                _.forEach(registerEventHandlerDescriptors, function(eventHandlerFunction, eventType) {
+                    socket.on(eventType, function(serverResponse) {
                         eventHandlerFunction(serverResponse);
                     });
                 });
@@ -37,34 +35,34 @@ angular.module('colledit.ioAngularServices', [])
                 socket.emit(eventType, data);
             };
 
-            this.getPageElement = function(pageElementKey, successCallback, errorCallback) {
-                $http.get('/pageElement/' + pageElementKey)
-                    .success(successCallback || new Function())
-                    .error(errorCallback || new Function());
+            this.getPageElement = function(pageElementId, successCallback, errorCallback) {
+                $http.get('/pageElement/' + pageElementId)
+                    .success(successCallback || _.noop)
+                    .error(errorCallback || _.noop);
             };
 
             this.listPageElements = function(successCallback, errorCallback) {
                 $http.get('/pageElements')
-                    .success(successCallback || new Function())
-                    .error(errorCallback || new Function());
+                    .success(successCallback || _.noop)
+                    .error(errorCallback || _.noop);
             };
 
             this.savePageElement = function(pageElement, successCallback, errorCallback) {
                 $http.post('/pageElement', pageElement)
-                    .success(successCallback || new Function())
-                    .error(errorCallback || new Function());
+                    .success(successCallback || _.noop)
+                    .error(errorCallback || _.noop);
             };
 
             this.deletePageElement = function(pageElement, successCallback, errorCallback) {
-                $http.delete('/pageElement/' + pageElement.key)
-                    .success(successCallback || new Function())
-                    .error(errorCallback || new Function());
+                $http.delete('/pageElement/' + pageElement.pageElementId)
+                    .success(successCallback || _.noop)
+                    .error(errorCallback || _.noop);
             };
 
             this.deleteAllPageElements = function(successCallback, errorCallback) {
                 $http.delete('/pageElements')
-                    .success(successCallback || new Function())
-                    .error(errorCallback || new Function());
+                    .success(successCallback || _.noop)
+                    .error(errorCallback || _.noop);
             };
         }
     });

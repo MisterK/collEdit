@@ -20,7 +20,8 @@ angular.module('colledit.controllers', [])
 
         $scope.setNextPageElementType = function(nextPageElementType) {
             $scope.nextPageElementType = nextPageElementType;
-            $scope.clearPageElementSelection();
+            var previouslySelectedElementType = clearPageElementSelection();
+            requirePageElementsRefresh(previouslySelectedElementType);
         };
 
         $scope.handleBackgroundClick = function(clickCoordinates) {
@@ -35,7 +36,6 @@ angular.module('colledit.controllers', [])
                     $scope.pageElementProperties);
             if (angular.isDefined(newPageElement)) {
                 $scope.selectPageElement(newPageElement);
-                $scope.pageElements[newPageElement.pageElementType].push(newPageElement);
                 persistPageElement(newPageElement);
             }
         };
@@ -46,14 +46,21 @@ angular.module('colledit.controllers', [])
             $scope.textContentsInputDialogStyle.display = 'none';
         };
 
-        $scope.clearPageElementSelection = function () {
+        var clearPageElementSelection = function () {
+            var previouslySelectedElementType = angular.isDefined($scope.selectedPageElement) ?
+                $scope.selectedPageElement.pageElementType : undefined;
             $scope.selectedPageElement = undefined;
             $scope.textContentsInputDialogStyle.display = 'none';
-            requirePageElementsRefresh();
+            return previouslySelectedElementType;
+        };
+
+        $scope.isPageElementSelectedId = function(pageElementId) {
+            return angular.isDefined($scope.selectedPageElement)
+                && $scope.selectedPageElement.pageElementId == pageElementId;
         };
 
         $scope.isPageElementSelected = function(pageElement) {
-            return $scope.selectedPageElement === pageElement;
+            return $scope.isPageElementSelectedId(pageElement.pageElementId);
         };
 
         $scope.isTextualPageElement = function(pageElement) {
@@ -101,48 +108,62 @@ angular.module('colledit.controllers', [])
         $scope.deletePageElement = function(pageElement) {
             pageElement = pageElement || $scope.selectedPageElement;
             if (angular.isDefined(pageElement)) {
-                $scope.pageElements[pageElement.pageElementType] =
-                    _.pull($scope.pageElements[pageElement.pageElementType], pageElement);
                 persistence.deletePageElement(pageElement);
-                if (pageElement === $scope.selectedPageElement) {
-                    $scope.selectedPageElement = undefined;
-                }
             }
         };
 
         $scope.deleteAllPageElements = function() {
-            _($scope.pageElements).values().forEach(function(pageElementsByType) {
-                pageElementsByType.length = 0;
-            });
             persistence.deleteAllPageElements();
         };
 
         //Setup persistence
-        var updatePageElementEventHandler = function(addedPageElement) {
-            var indexOfAddedPageElement = _.indexOf($scope.pageElements[addedPageElement.pageElementType],
-                function(pageElement) { return pageElement.key == addedPageElement.key; });
+        var pageElementSavedEventHandler = function(addedPageElement) {
+            pageElementsFactory.augmentPageElement(addedPageElement);
+            var indexOfAddedPageElement = _.findIndex($scope.pageElements[addedPageElement.pageElementType],
+                function(pageElement) { return pageElement.pageElementId == addedPageElement.pageElementId; });
             if (indexOfAddedPageElement < 0) {
                 $scope.pageElements[addedPageElement.pageElementType].push(addedPageElement);
             } else {
                 $scope.pageElements[addedPageElement.pageElementType][indexOfAddedPageElement] = addedPageElement;
-                requirePageElementsRefresh(addedPageElement.pageElementType);
             }
         };
-        var deletePageElementEventHandler = function(deletedPageElement) {
-            if (angular.isDefined(deletedPageElement)) {
-                $scope.deletePageElement(deletedPageElement);
+        var pageElementDeletedEventHandler = function(deletedPageElementId) {
+            if (angular.isDefined(deletedPageElementId)) {
+                _.forOwn($scope.pageElements, function(pageElementsForType) {
+                    return _.remove(pageElementsForType, function(pageElement) {
+                        return pageElement.pageElementId == deletedPageElementId;
+                    }).length == 0;
+                });
+
+                if ($scope.isPageElementSelectedId(deletedPageElementId)) {
+                   clearPageElementSelection();
+                }
             }
+        };
+        var allPageElementsDeletedEventHandler = function() {
+            _($scope.pageElements).values().forEach(function(pageElementsByType) {
+                pageElementsByType.length = 0;
+            });
+        };
+        var scopeApplyWrapper = function(eventHandlerCallback) {
+          return function() {
+              var passedArguments = arguments;
+              $scope.$apply(function() {
+                  eventHandlerCallback.apply(eventHandlerCallback, passedArguments);
+              });
+          };
         };
         var persistence = persistenceService.getPersistence(
-            {'updatePageElement': updatePageElementEventHandler,
-                'deletePageElement': deletePageElementEventHandler});
+            {'pageElementSaved': scopeApplyWrapper(pageElementSavedEventHandler),
+                'pageElementDeleted': scopeApplyWrapper(pageElementDeletedEventHandler),
+                'allPageElementsDeleted': scopeApplyWrapper(allPageElementsDeletedEventHandler)});
 
         //Initially get all locally-stored resources
         persistence.listPageElements(function(pageElements) {
             if (!angular.isArray(pageElements) || pageElements.length == 0) {
                 return;
             }
-            _(pageElements).groupBy(function (pageElement) { return pageElement.pageElementType; })
+            _(pageElements).groupBy(function(pageElement) { return pageElement.pageElementType; })
                 .forEach(function(pageElementsByType, pageElementType) {
                     _.forEach(pageElementsByType, function(pageElement) {
                         pageElementsFactory.augmentPageElement(pageElement);

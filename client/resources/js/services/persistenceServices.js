@@ -18,19 +18,18 @@ angular.module('colledit.persistenceServices', [])
         };
     })
     .service('localStorageService', function(lawnchairService) {
-        var lawnchairStorage = lawnchairService.getLawnchairStorage(
-            function() { });
+        var lawnchairStorage = lawnchairService.getLawnchairStorage(_.noop);
 
         this.savePageElement = function(pageElement, callback) {
             lawnchairStorage.save(pageElement, callback);
         };
 
         this.deletePageElement = function(pageElement, callback) {
-            lawnchairStorage.remove(pageElement.key, callback);
+            lawnchairStorage.remove(pageElement.pageElementId, callback);
         };
 
-        this.getPageElement = function(pageElementKey, callback) {
-            return lawnchairStorage.get(pageElementKey, callback);
+        this.getPageElement = function(pageElementId, callback) {
+            return lawnchairStorage.get(pageElementId, callback);
         };
 
         this.listAllPageElements = function(callback) {
@@ -45,52 +44,64 @@ angular.module('colledit.persistenceServices', [])
     .factory('persistenceService', function(serverCommunicationService, localStorageService) {
         function Persistence(registerEventHandlerDescriptors) {
             var connection = serverCommunicationService.getServerConnection();
-            var localElementsToBePersistedKeys = [],
-                localElementsToBeDeletedKeys = [];
+            var localElementsToBePersistedIds = [],
+                localElementsToBeDeletedIds = [];
 
-            var updatePageElementEventHandler = function (serverResponse) {
-                localStorageService.savePageElement(serverResponse.pageElement);
+            var pageElementSavedEventHandler = function(serverResponse) {
+                localStorageService.savePageElement(serverResponse);
 
-                if (angular.isDefined(registerEventHandlerDescriptors['updatePageElement'])) {
-                    registerEventHandlerDescriptors['updatePageElement'](serverResponse);
+                if (angular.isDefined(registerEventHandlerDescriptors['pageElementSaved'])) {
+                    registerEventHandlerDescriptors['pageElementSaved'](serverResponse);
                 }
             };
 
-            var deletePageElementEventHandler = function (serverResponse) {
-                localStorageService.deletePageElement(serverResponse.pageElement);
+            var pageElementDeletedEventHandler = function(serverResponse) {
+                localStorageService.deletePageElement(serverResponse);
 
-                if (angular.isDefined(registerEventHandlerDescriptors['deletePageElement'])) {
-                    registerEventHandlerDescriptors['deletePageElement'](serverResponse);
+                if (angular.isDefined(registerEventHandlerDescriptors['pageElementDeleted'])) {
+                    registerEventHandlerDescriptors['pageElementDeleted'](serverResponse);
+                }
+            };
+
+            var allPageElementsDeletedEventHandler = function(serverResponse) {
+                localStorageService.deleteAllPageElements();
+
+                if (angular.isDefined(registerEventHandlerDescriptors['allPageElementsDeleted'])) {
+                    registerEventHandlerDescriptors['allPageElementsDeleted'](serverResponse);
                 }
             };
 
             connection.connectToServerEventsWithListeners(
-                {'updatePageElement': updatePageElementEventHandler,
-                    'deletePageElement': deletePageElementEventHandler});
+                {'pageElementSaved': pageElementSavedEventHandler,
+                    'pageElementDeleted': pageElementDeletedEventHandler,
+                    'allPageElementsDeleted': allPageElementsDeletedEventHandler});
 
-            this.getPageElement = function (pageElementKey, callback) {
+            this.getPageElement = function(pageElementId, callback) {
                 if (connection.isConnected
-                    && localElementsToBePersistedKeys.indexOf(pageElement.key) < 0
-                    && localElementsToBeDeletedKeys.indexOf(pageElement.key) < 0) {
-                    connection.getPageElement(pageElementKey, function (pageElement) {
+                    && localElementsToBePersistedIds.indexOf(pageElement.pageElementId) < 0
+                    && localElementsToBeDeletedIds.indexOf(pageElement.pageElementId) < 0) {
+                    connection.getPageElement(pageElementId, function(pageElement) {
                         localStorageService.savePageElement(pageElement);
                         callback(pageElement);
-                    }, function (error) {
-                        localStorageService.getPageElement(pageElementKey, callback);
+                    }, function() {
+                        localStorageService.getPageElement(pageElementId, callback);
                     });
                 } else {
-                    localStorageService.getPageElement(pageElementKey, callback);
+                    localStorageService.getPageElement(pageElementId, callback);
                 }
             };
 
-            this.listPageElements = function (callback) {
+            this.listPageElements = function(callback) {
                 if (connection.isConnected) {
-                    connection.listPageElements(function (pageElements) {
-                        _.forEach(pageElements, function (pageElement) {
-                            localStorageService.savePageElement(pageElement);
-                        });
-                        callback(pageElements);
-                    }, function (error) {
+                    connection.listPageElements(function(pageElements) {
+                        if (angular.isArray(pageElements)) {
+                            _.forEach(pageElements, function(pageElement) {
+                                localStorageService.savePageElement(pageElement);
+                            });
+                        }
+                        //TODO determine here which elements are not known from the server yet and try to persist them
+                        localStorageService.listAllPageElements(callback);
+                    }, function() {
                         localStorageService.listAllPageElements(callback);
                     });
                 } else {
@@ -98,31 +109,31 @@ angular.module('colledit.persistenceServices', [])
                 }
             };
 
-            this.savePageElement = function (pageElement, callback) {
-                if (connection.isConnected && localElementsToBePersistedKeys.indexOf(pageElement.key) < 0) {
-                    connection.savePageElement(pageElement, undefined, function (error) {
-                        localElementsToBePersistedKeys.push(pageElement.key);
+            this.savePageElement = function(pageElement, callback) {
+                if (connection.isConnected && localElementsToBePersistedIds.indexOf(pageElement.pageElementId) < 0) {
+                    connection.savePageElement(pageElement, undefined, function() {
+                        localElementsToBePersistedIds.push(pageElement.pageElementId);
                     });
                 }
                 localStorageService.savePageElement(pageElement, callback);
             };
 
-            this.deletePageElement = function (pageElement, callback) {
-                if (connection.isConnected && localElementsToBeDeletedKeys.indexOf(pageElement.key) < 0) {
-                    connection.deletePageElement(pageElement, undefined, function (error) {
-                        localElementsToBeDeletedKeys.push(pageElement.key);
+            this.deletePageElement = function(pageElement, callback) {
+                if (connection.isConnected && localElementsToBeDeletedIds.indexOf(pageElement.pageElementId) < 0) {
+                    connection.deletePageElement(pageElement, undefined, function() {
+                        localElementsToBeDeletedIds.push(pageElement.pageElementId);
                     });
                 }
                 localStorageService.deletePageElement(pageElement, callback);
             };
 
-            this.deleteAllPageElements = function (callback) {
+            this.deleteAllPageElements = function(callback) {
                 if (connection.isConnected) {
-                    connection.deleteAllPageElements(undefined, function (error) {
-                        localStorageService.listAllPageElements(function (pageElements) {
-                            localElementsToBeDeletedKeys.push.apply(
-                                localElementsToBeDeletedKeys, _.pluck(pageElements, 'key'));
-                            localElementsToBeDeletedKeys = _.uniq(localElementsToBeDeletedKeys);
+                    connection.deleteAllPageElements(undefined, function() {
+                        localStorageService.listAllPageElements(function(pageElements) {
+                            localElementsToBeDeletedIds.push.apply(
+                                localElementsToBeDeletedIds, _.pluck(pageElements, 'pageElementId'));
+                            localElementsToBeDeletedIds = _.uniq(localElementsToBeDeletedIds);
                         });
                     });
                 }

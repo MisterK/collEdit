@@ -60,20 +60,28 @@ angular.module('colledit.dataAngularServices', [])
             return array[currentIndex < array.length -1 ? currentIndex + 1 : 0];
         };
 
+        var uuid = function () {
+            var S4 = function () {
+                return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+            };
+            return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
+        };
+
         function PageElement() {
-            this.fill = dataCfg.pageElements.defaultFill;
         }
 
         //TODO remove this
-        PageElement.prototype.super_ = function(pageElementType, coordinates, params) {
+        PageElement.prototype.superInit_ = function(pageElementType, coordinates, params) {
             if (!angular.isDefined(params)) {
                 params = {};
             }
-            this.key = Math.round(Math.random() * 1000000);
+            this.pageElementId = uuid();
+            this.key = this.pageElementId;
             this.version = 0;
             this.pageElementType = pageElementType;
             this.x = coordinates[0];
             this.y = coordinates[1];
+            this.fill = dataCfg.pageElements.defaultFill;
             this.togglableProperties = ['fill'];
             if (angular.isArray(params.togglableProperties)) {
                 this.togglableProperties.push.apply(this.togglableProperties, params.togglableProperties);
@@ -99,11 +107,6 @@ angular.module('colledit.dataAngularServices', [])
 
         function TextPageElement() {
             if (!(this instanceof TextPageElement)) return new TextPageElement();
-
-            _.forEach(['contents', 'fontSize', 'fontStyle', 'fontWeight', 'textDecoration'],
-                function(propertyName) {
-                    this[propertyName] = dataCfg.pageElements.propertiesDefaults[propertyName];
-                }, this);
         }
 
         TextPageElement.prototype = new PageElement;
@@ -113,7 +116,14 @@ angular.module('colledit.dataAngularServices', [])
                 togglableProperties: ['fontSize', 'fontWeight', 'fontStyle', 'textDecoration'],
                 isTextual: true
             }, params);
-            this.super_('svgText', coordinates, params);
+
+            this.superInit_('svgText', coordinates, params);
+
+            _.forEach(['contents', 'fontSize', 'fontStyle', 'fontWeight', 'textDecoration'],
+                function(propertyName) {
+                    this[propertyName] = dataCfg.pageElements.propertiesDefaults[propertyName];
+                }, this);
+
             return this;
         };
 
@@ -127,8 +137,6 @@ angular.module('colledit.dataAngularServices', [])
 
         function CirclePageElement() {
             if (!(this instanceof CirclePageElement)) return new CirclePageElement();
-
-            this.radius = dataCfg.pageElements.propertiesDefaults['radius'];
         }
 
         CirclePageElement.prototype = new PageElement;
@@ -137,7 +145,11 @@ angular.module('colledit.dataAngularServices', [])
             params = _.extend({
                 togglableProperties: ['radius']
             }, params);
-            this.super_('svgCircle', coordinates, params);
+
+            this.superInit_('svgCircle', coordinates, params);
+
+            this.radius = dataCfg.pageElements.propertiesDefaults['radius'];
+
             return this;
         };
 
@@ -147,9 +159,6 @@ angular.module('colledit.dataAngularServices', [])
 
         function RectanglePageElement() {
             if (!(this instanceof RectanglePageElement)) return new RectanglePageElement();
-
-            this.width = dataCfg.pageElements.propertiesDefaults['width'];
-            this.height = dataCfg.pageElements.propertiesDefaults['height'];
         }
 
         RectanglePageElement.prototype = new PageElement;
@@ -158,11 +167,16 @@ angular.module('colledit.dataAngularServices', [])
             params = _.extend({
                 togglableProperties: ['width', 'height']
             }, params);
+
+            this.width = dataCfg.pageElements.propertiesDefaults['width'];
+            this.height = dataCfg.pageElements.propertiesDefaults['height'];
+
             if (angular.isArray(coordinates) && coordinates.length >= 2) {
-                coordinates[0] = coordinates[0] - this.width / 2;
-                coordinates[1] = coordinates[1] - this.height / 2;
+                coordinates[0] = coordinates[0] - (this.width / 2);
+                coordinates[1] = coordinates[1] - (this.height / 2);
             }
-            this.super_('svgRect', coordinates, params);
+            this.superInit_('svgRect', coordinates, params);
+
             return this;
         };
 

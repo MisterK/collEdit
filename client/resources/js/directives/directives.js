@@ -16,7 +16,7 @@ angular.module('colledit.directives', [])
             restrict: 'E',
             template: '<div class="colleditPageDiv"></div>',
             replace: true,
-            link: function (scope, element) {
+            link: function(scope, element) {
                 var d3 = d3Service.d3;
                 var svg = d3.select(element[0])
                     .append('svg')
@@ -34,9 +34,9 @@ angular.module('colledit.directives', [])
                         .attr('class', 'clickableBackground')
                         .attr('width', presentationCfg.pageWidth)
                         .attr('height', presentationCfg.pageHeight)
-                        .on('click', function(d) {
+                        .on('click', function() {
                             var container = this;
-                            scope.$apply(function () {
+                            scope.$apply(function() {
                                 scope.handleBackgroundClick(d3.mouse(container));
                             });
                         });
@@ -72,7 +72,7 @@ angular.module('colledit.directives', [])
                             pageElements.enter())
                             .attr('class', 'pageElement ' + pageElementType)
                             .on('click', function(d) {
-                                scope.$apply(function () {
+                                scope.$apply(function() {
                                     scope.selectPageElement(d);
                                     reDrawPageElements();
                                 });

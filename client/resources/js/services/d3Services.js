@@ -145,7 +145,7 @@ angular.module('colledit.d3AngularServices', [])
                         .attr('opacity', 0)
                         .duration(presentationCfg.animations.shortDuration)
                         .delay(delayFn)
-                        .each("end", function () {
+                        .each("end", function() {
                             if (removeElementAtEnd) {
                                 d3.select(this).remove();
                             }
