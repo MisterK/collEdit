@@ -43,12 +43,12 @@ var deletePageElement = function(pageElementToDeleteId) {
 };
 
 var deleteAllPageElements = function() {
-    for (var pageElement in getAllPageElements()) {
-        if (!deletePageElement(pageElement.pageElementId)) {
-            return false;
-        }
-    }
-    return true;
+    var result = true;
+    _.forEach(_.values(getAllPageElements()), function(pageElement) {
+        result = deletePageElement(pageElement.pageElementId);
+        return result;
+    });
+    return result;
 };
 
 var getAllPageElements = function() {
@@ -59,65 +59,71 @@ var getPageElement = function(pageElementId) {
     return getAllPageElements()[pageElementId];
 };
 
+var log = function(message) {
+    console.log(new Date().toLocaleTimeString() + ' - ' + message);
+};
+
+var logError = function(message) {
+    console.error(new Date().toLocaleTimeString() + ' - ' + message);
+};
+
 /*********** SocketIO part **************/
 
 io.sockets.on('connection', function (socket) {
-	socket.emit('allPageElements', _.values(getAllPageElements()));
-
-	socket.on('savePageElement', function (pageElementToSave) {
-		if (savePageElement(pageElementToSave)) {
+	socket.on('getAllPageElements', function (callback) {
+        if (callback) {
+            var pageElements = _.values(getAllPageElements());
+            log('Listing all ' + pageElements.length + ' elements');
+            callback({status: 200, pageElements: pageElements});
+        }
+	}).on('savePageElement', function (pageElementToSave, callback) {
+        log('Saving pageElement "' + pageElementToSave.pageElementId +
+            '" of type ' + pageElementToSave.pageElementType);
+        var pageElementSaved = savePageElement(pageElementToSave);
+        if (pageElementSaved) {
+            log('Saved pageElement "' + pageElementToSave.pageElementId +
+                '" of type ' + pageElementToSave.pageElementType);
 			io.sockets.emit('pageElementSaved', pageElementToSave);
 		}
+        if (callback && pageElementSaved) {
+            callback({status: 200});
+        } else {
+            logError('PageElement "' + pageElementToSave.pageElementId +
+                '" of type ' + pageElementToSave.pageElementType + ' could not be saved');
+            callback({status: 500, message: 'Page element could not be saved'});
+        }
 	})
-	.on('deletePageElement', function (pageElementToDelete) {
-		if (deletePageElement(pageElementToDelete.pageElementId)) {
-			io.sockets.emit('pageElementDeleted', pageElementToDelete);
+	.on('deletePageElement', function (pageElementToDeleteId, callback) {
+        log('Deleting pageElement "' + pageElementToDeleteId + '"');
+        var pageElementDeleted = deletePageElement(pageElementToDeleteId);
+        if (pageElementDeleted) {
+            log('Deleted pageElement "' + pageElementToDeleteId + '"');
+			io.sockets.emit('pageElementDeleted', pageElementToDeleteId);
 		}
+        if (callback && pageElementDeleted) {
+            callback({status: 200});
+        } else {
+            logError('PageElement "' + pageElementToDeleteId + '" could not be deleted, as it was not found');
+            callback({status: 500, message: 'Page element could not be deleted, as it was not found'});
+        }
 	})
-    .on('deleteAllPageElements', function () {
-        if (deleteAllPageElements()) {
-            io.sockets.emit('allPageElementsDeleted', pageElementToDelete);
+    .on('deleteAllPageElements', function (callback) {
+        log('Deleting all pageElements');
+        var allPageElementsDeleted = deleteAllPageElements();
+        if (allPageElementsDeleted) {
+            log('Deleted all pageElements');
+            io.sockets.emit('allPageElementsDeleted');
+        }
+        if (callback && allPageElementsDeleted) {
+            callback({status: 200});
+        } else {
+            logError('Some page elements could not be deleted');
+            callback({status: 500, message: 'Some page elements could not be deleted'});
         }
     })
 	.on('disconnect', function(){
         //TODO
     });
-});
-
-/*************** HTTP part ***************/
-
-app.get('/pageElements', function(req, res) {
-    res.json(_.values(getAllPageElements()));
-});
-
-app.get('/pageElement/:pageElementId', function(req, res) {
-    res.json(getPageElement(req.params.pageElementId));
-});
-
-app.post('/pageElement', function(req, res) {
-    var pageElementToSave = req.body;
-    var pageElementSaved = savePageElement(pageElementToSave);
-    if (pageElementSaved) {
-        io.sockets.emit('pageElementSaved', pageElementToSave);
-    }
-    res.send(pageElementSaved ? 200 : 400);
-});
-
-app.delete('/pageElement/:pageElementId', function(req, res) {
-    var pageElementToDeleteId = req.params.pageElementId;
-    var pageElementDeleted = deletePageElement(pageElementToDeleteId);
-    if (pageElementDeleted) {
-        io.sockets.emit('pageElementDeleted', pageElementToDeleteId);
-    }
-    res.send(pageElementDeleted ? 200 : 400);
-});
-
-app.delete('/pageElements', function(req, res) {
-    var allPageElementsDeleted = deleteAllPageElements();
-    if (allPageElementsDeleted) {
-        io.sockets.emit('allPageElementsDeleted');
-    }
-    res.send(allPageElementsDeleted ? 200 : 400);
 });
 
 server.listen(port);

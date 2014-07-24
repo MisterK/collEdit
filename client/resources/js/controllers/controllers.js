@@ -3,7 +3,7 @@
 /**** Angular controllers ****/
 
 angular.module('colledit.controllers', [])
-    .controller('CollEditController', function($scope, pageElementsFactory, persistenceService, dataCfg) {
+    .controller('CollEditController', function($scope, pageElementsFactory, persistenceService, dataCfg, logService) {
         $scope.nextPageElementType = undefined;
         $scope.pageElements =  _.reduce(dataCfg.pageElementTypes, function(result, pageElementType) {
             result[pageElementType] = [];
@@ -35,6 +35,8 @@ angular.module('colledit.controllers', [])
                     clickCoordinates,
                     $scope.pageElementProperties);
             if (angular.isDefined(newPageElement)) {
+                logService.logDebug('Created element "' + newPageElement.pageElementId +
+                    '" of type ' + newPageElement.pageElementType);
                 $scope.selectPageElement(newPageElement);
                 persistPageElement(newPageElement);
             }
@@ -71,6 +73,8 @@ angular.module('colledit.controllers', [])
         $scope.togglePageElementProperty = function(propertyName, pageElement) {
             pageElement = pageElement || $scope.selectedPageElement;
             if (angular.isDefined(pageElement)) {
+                logService.logDebug('Toggling property "' + propertyName + '" of element "' +
+                    pageElement.pageElementId + '" of type ' + pageElement.pageElementType);
                 pageElement.toggleProperty(propertyName);
                 pageElementUpdated(pageElement);
             }
@@ -80,6 +84,8 @@ angular.module('colledit.controllers', [])
             pageElement = pageElement || $scope.selectedPageElement;
             if (angular.isDefined(pageElement)
                 && angular.isFunction(pageElement.toggleSize)) {
+                logService.logDebug('Toggling size of element "' + pageElement.pageElementId +
+                    '" of type ' + pageElement.pageElementType);
                 pageElement.toggleSize();
                 pageElementUpdated(pageElement);
             }
@@ -98,6 +104,8 @@ angular.module('colledit.controllers', [])
             pageElement = pageElement || $scope.selectedPageElement;
             if (angular.isDefined(pageElement) && angular.isDefined($scope.textContentsInput)
                 && angular.isFunction(pageElement.changeTextContents)) {
+                logService.logDebug('Changing text contents of element "' + pageElement.pageElementId +
+                    '" of type ' + pageElement.pageElementType);
                 pageElement.changeTextContents($scope.textContentsInput);
                 pageElementUpdated(pageElement);
                 $scope.textContentsInput = '';
@@ -108,11 +116,14 @@ angular.module('colledit.controllers', [])
         $scope.deletePageElement = function(pageElement) {
             pageElement = pageElement || $scope.selectedPageElement;
             if (angular.isDefined(pageElement)) {
+                logService.logDebug('Deleting element "' + pageElement.pageElementId +
+                    '" of type ' + pageElement.pageElementType);
                 persistence.deletePageElement(pageElement);
             }
         };
 
         $scope.deleteAllPageElements = function() {
+            logService.logDebug('Deleting all elements');
             persistence.deleteAllPageElements();
         };
 
@@ -122,13 +133,19 @@ angular.module('colledit.controllers', [])
             var indexOfAddedPageElement = _.findIndex($scope.pageElements[addedPageElement.pageElementType],
                 function(pageElement) { return pageElement.pageElementId == addedPageElement.pageElementId; });
             if (indexOfAddedPageElement < 0) {
+                logService.logDebug('Adding element "' + addedPageElement.pageElementId +
+                    '" of type ' + addedPageElement.pageElementType + ' received from server');
                 $scope.pageElements[addedPageElement.pageElementType].push(addedPageElement);
             } else {
+                logService.logDebug('Updating element "' + addedPageElement.pageElementId +
+                    '" of type ' + addedPageElement.pageElementType + ' received from server');
                 $scope.pageElements[addedPageElement.pageElementType][indexOfAddedPageElement] = addedPageElement;
             }
         };
         var pageElementDeletedEventHandler = function(deletedPageElementId) {
             if (angular.isDefined(deletedPageElementId)) {
+                logService.logDebug('Deleting element "' + deletedPageElementId +
+                    '" received from server');
                 _.forOwn($scope.pageElements, function(pageElementsForType) {
                     return _.remove(pageElementsForType, function(pageElement) {
                         return pageElement.pageElementId == deletedPageElementId;
@@ -141,6 +158,7 @@ angular.module('colledit.controllers', [])
             }
         };
         var allPageElementsDeletedEventHandler = function() {
+            logService.logDebug('Deleting all elements received from server');
             _($scope.pageElements).values().forEach(function(pageElementsByType) {
                 pageElementsByType.length = 0;
             });
@@ -160,16 +178,20 @@ angular.module('colledit.controllers', [])
 
         //Initially get all locally-stored resources
         persistence.listPageElements(function(pageElements) {
+            logService.logDebug('Listing all ' + pageElements.length + ' elements received from server');
             if (!angular.isArray(pageElements) || pageElements.length == 0) {
                 return;
             }
-            _(pageElements).groupBy(function(pageElement) { return pageElement.pageElementType; })
-                .forEach(function(pageElementsByType, pageElementType) {
-                    _.forEach(pageElementsByType, function(pageElement) {
-                        pageElementsFactory.augmentPageElement(pageElement);
-                        $scope.pageElements[pageElementType].push(pageElement);
+            $scope.$apply(function() {
+                _(pageElements).groupBy(function (pageElement) {
+                    return pageElement.pageElementType;
+                }).forEach(function (pageElementsByType, pageElementType) {
+                        _.forEach(pageElementsByType, function (pageElement) {
+                            pageElementsFactory.augmentPageElement(pageElement);
+                            $scope.pageElements[pageElementType].push(pageElement);
+                        });
                     });
-                });
+            });
         });
 
         var persistPageElement = function(pageElement) {

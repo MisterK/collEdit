@@ -3,7 +3,7 @@
 /**** Common angular services ****/
 
 angular.module('colledit.ioAngularServices', [])
-    .service('serverCommunicationService', function($http, $window) {
+    .service('serverCommunicationService', function($window) {
         this.getServerConnection = function() {
             return new ServerConnection();
         };
@@ -31,38 +31,52 @@ angular.module('colledit.ioAngularServices', [])
                 return this;
             };
 
-            this.emitEvent = function(eventType, data) {
-                socket.emit(eventType, data);
-            };
-
-            this.getPageElement = function(pageElementId, successCallback, errorCallback) {
-                $http.get('/pageElement/' + pageElementId)
-                    .success(successCallback || _.noop)
-                    .error(errorCallback || _.noop);
+            var emitEvent = function(eventType, data, callback) {
+                if (angular.isDefined(data)) {
+                    socket.emit(eventType, data, callback);
+                } else {
+                    socket.emit(eventType, callback);
+                }
             };
 
             this.listPageElements = function(successCallback, errorCallback) {
-                $http.get('/pageElements')
-                    .success(successCallback || _.noop)
-                    .error(errorCallback || _.noop);
+                emitEvent('getAllPageElements', undefined, function(response) {
+                    if (response.status == 200) {
+                        (successCallback || _.noop)(response.pageElements);
+                    } else {
+                        (errorCallback || _.noop)(response.status, response.message);
+                    }
+                });
             };
 
             this.savePageElement = function(pageElement, successCallback, errorCallback) {
-                $http.post('/pageElement', pageElement)
-                    .success(successCallback || _.noop)
-                    .error(errorCallback || _.noop);
+                emitEvent('savePageElement', pageElement, function(response) {
+                    if (response.status == 200) {
+                        (successCallback || _.noop)();
+                    } else {
+                        (errorCallback || _.noop)(response.status, response.message);
+                    }
+                });
             };
 
             this.deletePageElement = function(pageElement, successCallback, errorCallback) {
-                $http.delete('/pageElement/' + pageElement.pageElementId)
-                    .success(successCallback || _.noop)
-                    .error(errorCallback || _.noop);
+                emitEvent('deletePageElement', pageElement.pageElementId, function(response) {
+                    if (response.status == 200) {
+                        (successCallback || _.noop)();
+                    } else {
+                        (errorCallback || _.noop)(response.status, response.message);
+                    }
+                });
             };
 
             this.deleteAllPageElements = function(successCallback, errorCallback) {
-                $http.delete('/pageElements')
-                    .success(successCallback || _.noop)
-                    .error(errorCallback || _.noop);
+                emitEvent('deleteAllPageElements', undefined, function(response) {
+                    if (response.status == 200) {
+                        (successCallback || _.noop)();
+                    } else {
+                        (errorCallback || _.noop)(response.status, response.message);
+                    }
+                });
             };
         }
     });

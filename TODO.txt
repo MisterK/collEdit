@@ -1,4 +1,7 @@
-- WebRTC/socketio
+- Handle socketio error events
+- Client-side reconciliation attempts
+- child controller for text edition dialog
+- double-click for child edition
 - Versioning
 - More element types
     -> image
