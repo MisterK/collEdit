@@ -9,7 +9,7 @@ angular.module('colledit.dataAngularServices', [])
             'defaultFill': 'black',
             'propertiesEnums': {
                 'fill': ['black', 'red', 'blue', 'green'],
-                'fontSize': ['10px', '12px', '14px', '16px'],
+                'fontSize': ['12px', '14px', '18px', '24px'],
                 'fontStyle': ['normal', 'italic', 'oblique'],
                 'fontWeight': ['normal', 'bold', 'bolder', 'lighter'],
                 'textDecoration': ['none', 'underline', 'overline', 'line-through', 'blink']
@@ -124,6 +124,9 @@ angular.module('colledit.dataAngularServices', [])
                     this[propertyName] = dataCfg.pageElements.propertiesDefaults[propertyName];
                 }, this);
 
+            this.centerX = this.x;
+            this.centerY = this.y;
+
             return this;
         };
 
@@ -149,6 +152,8 @@ angular.module('colledit.dataAngularServices', [])
             this.superInit_('svgCircle', coordinates, params);
 
             this.radius = dataCfg.pageElements.propertiesDefaults['radius'];
+            this.centerX = this.x;
+            this.centerY = this.y;
 
             return this;
         };
@@ -172,6 +177,8 @@ angular.module('colledit.dataAngularServices', [])
             this.height = dataCfg.pageElements.propertiesDefaults['height'];
 
             if (angular.isArray(coordinates) && coordinates.length >= 2) {
+                this.centerX = coordinates[0];
+                this.centerY = coordinates[1];
                 coordinates[0] = coordinates[0] - (this.width / 2);
                 coordinates[1] = coordinates[1] - (this.height / 2);
             }

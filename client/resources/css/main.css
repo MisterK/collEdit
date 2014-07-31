@@ -52,11 +52,32 @@
 .deleteControls {
 }
 
-.textContentsInputDialog {
+.modifyControlsDialog {
     position: absolute;
     z-index: 1000;
     border: 1px solid black;
     background-color: white;
     text-align: center;
     padding: 3px;
+}
+
+.changeColorPageElement {
+    background: linear-gradient(to bottom right, red, lightgreen);
+}
+
+.changeFontStylePageElement {
+    font-style: italic;
+    font-family: Times New Roman, serif;
+}
+
+.changeFontWeightPageElement {
+    font-weight: bold;
+}
+
+.changeTextDecorationPageElement {
+    text-decoration: underline;
+}
+
+.deletePageElement {
+    font-weight: bold;
 }

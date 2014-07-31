@@ -11,8 +11,7 @@ angular.module('colledit.controllers', [])
         }, {});
         $scope.selectedPageElement = undefined;
         $scope.pageElementProperties = {};
-        $scope.textContentsInputDialogStyle = {
-            display: 'none',
+        $scope.modifyControlsDialogStyle = {
             top: '0px',
             left: '0px'
         };
@@ -20,14 +19,14 @@ angular.module('colledit.controllers', [])
 
         $scope.setNextPageElementType = function(nextPageElementType) {
             $scope.nextPageElementType = nextPageElementType;
-            var previouslySelectedElementType = clearPageElementSelection();
-            requirePageElementsRefresh(previouslySelectedElementType);
+            clearPageElementSelectionAndRefresh();
         };
 
         $scope.handleBackgroundClick = function(clickCoordinates) {
             if (!angular.isDefined($scope.nextPageElementType)
                 || !angular.isArray(clickCoordinates)
                 || clickCoordinates.length < 2) {
+                clearPageElementSelectionAndRefresh();
                 return;
             }
             var newPageElement = pageElementsFactory.createPageElement(
@@ -42,19 +41,37 @@ angular.module('colledit.controllers', [])
             }
         };
 
+        var displayModifyControlsDialog = function(pageElement) {
+            pageElement = pageElement || $scope.selectedPageElement;
+            if (angular.isDefined(pageElement)) {
+                $scope.modifyControlsDialogStyle.left = (pageElement.centerX - 81) + "px";
+                $scope.modifyControlsDialogStyle.top = (pageElement.centerY + 20) + "px";
+            }
+        };
+
         $scope.selectPageElement = function(pageElement) {
             $scope.selectedPageElement = pageElement;
             $scope.nextPageElementType = undefined;
-            $scope.textContentsInputDialogStyle.display = 'none';
+            if ($scope.isTextualPageElement(pageElement)) {
+                $scope.textContentsInput = pageElement.contents;
+            }
+            displayModifyControlsDialog(pageElement);
         };
 
         var clearPageElementSelection = function () {
             var previouslySelectedElementType = angular.isDefined($scope.selectedPageElement) ?
                 $scope.selectedPageElement.pageElementType : undefined;
             $scope.selectedPageElement = undefined;
-            $scope.textContentsInputDialogStyle.display = 'none';
+            $scope.textContentsInput = '';
             return previouslySelectedElementType;
         };
+
+        function clearPageElementSelectionAndRefresh() {
+            var previouslySelectedElementType = clearPageElementSelection();
+            if (angular.isDefined(previouslySelectedElementType)) {
+                requirePageElementsRefresh(previouslySelectedElementType);
+            }
+        }
 
         $scope.isPageElementSelectedId = function(pageElementId) {
             return angular.isDefined($scope.selectedPageElement)
@@ -91,15 +108,6 @@ angular.module('colledit.controllers', [])
             }
         };
 
-        $scope.displayTextContentsInputDialog = function(pageElement) {
-            pageElement = pageElement || $scope.selectedPageElement;
-            if (angular.isDefined(pageElement)) {
-                $scope.textContentsInputDialogStyle.display = 'block';
-                $scope.textContentsInputDialogStyle.left = (pageElement.x - 100) + "px";
-                $scope.textContentsInputDialogStyle.top = (pageElement.y + 20) + "px";
-            }
-        };
-
         $scope.changeTextPageElementsContents = function(pageElement) {
             pageElement = pageElement || $scope.selectedPageElement;
             if (angular.isDefined(pageElement) && angular.isDefined($scope.textContentsInput)
@@ -109,7 +117,6 @@ angular.module('colledit.controllers', [])
                 pageElement.changeTextContents($scope.textContentsInput);
                 pageElementUpdated(pageElement);
                 $scope.textContentsInput = '';
-                $scope.textContentsInputDialogStyle.display = 'none';
             }
         };
 
@@ -128,18 +135,21 @@ angular.module('colledit.controllers', [])
         };
 
         //Setup persistence
-        var pageElementSavedEventHandler = function(addedPageElement) {
-            pageElementsFactory.augmentPageElement(addedPageElement);
-            var indexOfAddedPageElement = _.findIndex($scope.pageElements[addedPageElement.pageElementType],
-                function(pageElement) { return pageElement.pageElementId == addedPageElement.pageElementId; });
-            if (indexOfAddedPageElement < 0) {
-                logService.logDebug('Adding element "' + addedPageElement.pageElementId +
-                    '" of type ' + addedPageElement.pageElementType + ' received from server');
-                $scope.pageElements[addedPageElement.pageElementType].push(addedPageElement);
+        var pageElementSavedEventHandler = function(savedPageElement) {
+            pageElementsFactory.augmentPageElement(savedPageElement);
+            var indexOfSavedPageElement = _.findIndex($scope.pageElements[savedPageElement.pageElementType],
+                function(pageElement) { return pageElement.pageElementId == savedPageElement.pageElementId; });
+            if (indexOfSavedPageElement < 0) {
+                logService.logDebug('Adding element "' + savedPageElement.pageElementId +
+                    '" of type ' + savedPageElement.pageElementType + ' received from server');
+                $scope.pageElements[savedPageElement.pageElementType].push(savedPageElement);
             } else {
-                logService.logDebug('Updating element "' + addedPageElement.pageElementId +
-                    '" of type ' + addedPageElement.pageElementType + ' received from server');
-                $scope.pageElements[addedPageElement.pageElementType][indexOfAddedPageElement] = addedPageElement;
+                logService.logDebug('Updating element "' + savedPageElement.pageElementId +
+                    '" of type ' + savedPageElement.pageElementType + ' received from server');
+                $scope.pageElements[savedPageElement.pageElementType][indexOfSavedPageElement] = savedPageElement;
+                if ($scope.isPageElementSelected(savedPageElement)) {
+                    $scope.selectPageElement(savedPageElement); //Re-select it to update edit dialog
+                }
             }
         };
         var pageElementDeletedEventHandler = function(deletedPageElementId) {
@@ -162,6 +172,7 @@ angular.module('colledit.controllers', [])
             _($scope.pageElements).values().forEach(function(pageElementsByType) {
                 pageElementsByType.length = 0;
             });
+            clearPageElementSelection();
         };
         var scopeApplyWrapper = function(eventHandlerCallback) {
           return function() {

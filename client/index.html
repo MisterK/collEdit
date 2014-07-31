@@ -32,35 +32,27 @@
             <span class="elementTypeToAdd" ng-class="{elementTypeToAddSelected: nextPageElementType == 'svgRect'}"
                   ng-click="setNextPageElementType('svgRect')">SVG rectangle</span>
         </div>
-        <div class="modifyControls" ng-show="selectedPageElement">
-            <hr />
-            Modify selected element:
-            <div class="updateControls">
-                <div class="generalUpdateControls">
-                    <button class="changeColorPageElement" ng-click="togglePageElementProperty('fill')">Toggle color</button>
-                    <button class="changeSizePageElement" ng-click="togglePageElementSize()">Toggle size</button>
-                </div>
-                <div class="textualUpdateControls" ng-show="isTextualPageElement()">
-                    <hr />
-                    <button class="changeContentsPageElement" ng-click="displayTextContentsInputDialog()">Change contents</button><br />
-                    <button class="changeFontStylePageElement" ng-click="togglePageElementProperty('fontStyle')">Toggle font style</button>
-                    <button class="changeFontWeightPageElement" ng-click="togglePageElementProperty('fontWeight')">Toggle font weight</button>
-                    <button class="changeTextDecorationPageElement" ng-click="togglePageElementProperty('textDecoration')">Toggle text decoration</button>
-                </div>
-            </div>
-            <hr />
-            <div class="deleteControls">
-                <button class="deletePageElement" ng-click="deletePageElement()">Delete selected</button>
-            </div>
-        </div>
         <hr />
         <div class="otherControls">
-            <button class="deleteAllPageElements" ng-click="deleteAllPageElements()">Clear all</button>
+            <button class="deleteAllPageElements" ng-click="deleteAllPageElements()">Nuke!</button>
         </div>
     </div>
-    <div class="textContentsInputDialog" ng-style="textContentsInputDialogStyle">
-        Text contents: <input type="text" ng-model="textContentsInput" /><br />
-        <button ng-click="changeTextPageElementsContents()">Update</button>
+    <div class="modifyControlsDialog" ng-show="selectedPageElement" ng-style="modifyControlsDialogStyle">
+        Modify selected element:
+        <div class="updateControls">
+            <div class="generalUpdateControls">
+                <button class="changeColorPageElement" ng-click="togglePageElementProperty('fill')">&nbsp;</button>
+                <button class="changeSizePageElement" ng-click="togglePageElementSize()">A&uparrow;</button>
+                <button class="deletePageElement" ng-click="deletePageElement()">&cross;</button>
+            </div>
+            <div class="textualUpdateControls" ng-show="isTextualPageElement()">
+                <hr />
+                <button class="changeFontStylePageElement" ng-click="togglePageElementProperty('fontStyle')">I</button>
+                <button class="changeFontWeightPageElement" ng-click="togglePageElementProperty('fontWeight')">B</button>
+                <button class="changeTextDecorationPageElement" ng-click="togglePageElementProperty('textDecoration')">U</button><br />
+                &#9998;: <input type="text" ng-model="textContentsInput" ng-blur="changeTextPageElementsContents()" />
+            </div>
+        </div>
     </div>
 	<script src="/socket.io/socket.io.js"></script>
 </body>
