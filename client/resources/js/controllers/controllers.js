@@ -175,12 +175,13 @@ angular.module('colledit.controllers', [])
             clearPageElementSelection();
         };
         var scopeApplyWrapper = function(eventHandlerCallback) {
-          return function() {
+          eventHandlerCallback.scopeApplyWrapper = function() {
               var passedArguments = arguments;
               $scope.$apply(function() {
                   eventHandlerCallback.apply(eventHandlerCallback, passedArguments);
               });
           };
+          return eventHandlerCallback;
         };
         var persistence = persistenceService.getPersistence(
             {'pageElementSaved': scopeApplyWrapper(pageElementSavedEventHandler),
@@ -193,7 +194,7 @@ angular.module('colledit.controllers', [])
             if (!angular.isArray(pageElements) || pageElements.length == 0) {
                 return;
             }
-            $scope.$apply(function() {
+            //TODO to remove? $scope.$apply(function() {
                 _(pageElements).groupBy(function (pageElement) {
                     return pageElement.pageElementType;
                 }).forEach(function (pageElementsByType, pageElementType) {
@@ -202,7 +203,7 @@ angular.module('colledit.controllers', [])
                             $scope.pageElements[pageElementType].push(pageElement);
                         });
                     });
-            });
+            //});
         });
 
         var persistPageElement = function(pageElement) {

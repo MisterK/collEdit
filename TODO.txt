@@ -1,5 +1,4 @@
-- Handle socketio error events
-- Client-side reconciliation attempts
+- Client-side reconciliation attempts on server connect/reconnect
 - child controller for text edition dialog
 - double-click for child edition
 - Versioning
@@ -26,11 +25,11 @@ DONE
         => font-style
         => font-weight
         => text-decoration
+- Handle socketio error events
 
 
 BUGS
 ----------
-- Exit animation not always applied?
 - Use deep collection watch instead of events
 - Fix PageElement prototype inheritance
-- Delete all doesn't clear browser's local storage
+- Fix D3 functions by type to remove grouping by type in scope

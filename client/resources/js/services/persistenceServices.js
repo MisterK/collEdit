@@ -33,7 +33,6 @@ angular.module('colledit.persistenceServices', [])
         };
 
         this.deleteAllPageElements = function(callback) {
-            //TODO This clears the storage, but not the browser's localStorage
             return lawnchairStorage.nuke(callback);
         };
     })
@@ -43,33 +42,45 @@ angular.module('colledit.persistenceServices', [])
             var localElementsToBePersistedIds = [],
                 localElementsToBeDeletedIds = [];
 
+            var getWrappedEventHandlerDescriptor = function(eventHandlerDescriptorKey) {
+                var eventHandlerDescriptor = registerEventHandlerDescriptors[eventHandlerDescriptorKey];
+                if (angular.isDefined(eventHandlerDescriptor)) {
+                    if (angular.isDefined(eventHandlerDescriptor.scopeApplyWrapper)) {
+                        return eventHandlerDescriptor.scopeApplyWrapper;
+                    } else {
+                        return eventHandlerDescriptor;
+                    }
+                }
+            };
+
+            var executeWrappedEventHandlerDescriptor = function(eventHandlerDescriptorKey, serverResponse) {
+                var wrappedEventHandlerDescriptor = getWrappedEventHandlerDescriptor(eventHandlerDescriptorKey);
+                if (angular.isDefined(wrappedEventHandlerDescriptor)) {
+                    wrappedEventHandlerDescriptor(serverResponse);
+                }
+            };
+
             var pageElementSavedEventHandler = function(serverResponse) {
                 logService.logDebug('Persistence: Saving element "' + serverResponse.pageElementId +
                     '" of type ' + serverResponse.pageElementType + ' received from server');
 
                 localStorageService.savePageElement(serverResponse);
 
-                if (angular.isDefined(registerEventHandlerDescriptors['pageElementSaved'])) {
-                    registerEventHandlerDescriptors['pageElementSaved'](serverResponse);
-                }
+                executeWrappedEventHandlerDescriptor('pageElementSaved', serverResponse);
             };
 
             var pageElementDeletedEventHandler = function(serverResponse) {
                 logService.logDebug('Persistence: Deleting element "' + serverResponse + '" received from server');
                 localStorageService.deletePageElement(serverResponse);
 
-                if (angular.isDefined(registerEventHandlerDescriptors['pageElementDeleted'])) {
-                    registerEventHandlerDescriptors['pageElementDeleted'](serverResponse);
-                }
+                executeWrappedEventHandlerDescriptor('pageElementDeleted', serverResponse);
             };
 
             var allPageElementsDeletedEventHandler = function(serverResponse) {
                 logService.logDebug('Persistence: Deleting all elements received from server');
                 localStorageService.deleteAllPageElements();
 
-                if (angular.isDefined(registerEventHandlerDescriptors['allPageElementsDeleted'])) {
-                    registerEventHandlerDescriptors['allPageElementsDeleted'](serverResponse);
-                }
+                executeWrappedEventHandlerDescriptor('allPageElementsDeleted', serverResponse);
             };
 
             connection.connectToServerEventsWithListeners(
@@ -88,6 +99,9 @@ angular.module('colledit.persistenceServices', [])
                             });
                         }
                         //TODO determine here which elements are not known from the server yet and try to persist them
+                        //TODO determine here which updated elements are not updated yet from the server yet and try to update them
+                        //TODO determine here which deleted elements are not deleted yet from the server yet and try to delete them
+                        //TODO get list of deleted elements ids from the server and delete them here if necessary
                         localStorageService.listAllPageElements(callback);
                     }, function() {
                         logService.logError('Persistence: Listing all elements received' +
@@ -100,13 +114,14 @@ angular.module('colledit.persistenceServices', [])
                 }
             };
 
-            this.savePageElement = function(pageElement, callback) {
+            this.savePageElement = function(pageElement) {
                 if (connection.isConnected && localElementsToBePersistedIds.indexOf(pageElement.pageElementId) < 0) {
                     connection.savePageElement(pageElement, undefined, function() {
                         logService.logDebug('Persistence: Saving element "' + pageElement.pageElementId +
                             '" of type ' + pageElement.pageElementType + ' has failed, storing it for later');
                         localElementsToBePersistedIds.push(pageElement.pageElementId);
-                        localStorageService.savePageElement(pageElement, callback);
+                        localStorageService.savePageElement(pageElement,
+                            getWrappedEventHandlerDescriptor('pageElementSaved'));
                     });
                 } else {
                     if (localElementsToBePersistedIds.indexOf(pageElement.pageElementId) < 0) {
@@ -116,17 +131,27 @@ angular.module('colledit.persistenceServices', [])
                     }
                     logService.logDebug('Persistence: Saving element "' + pageElement.pageElementId +
                         '" when not connected');
-                    localStorageService.savePageElement(pageElement, callback);
+                    localStorageService.savePageElement(pageElement,
+                        registerEventHandlerDescriptors['pageElementSaved']);
                 }
             };
 
-            this.deletePageElement = function(pageElement, callback) {
+            var deletePageElementWrapper = function(callback, deletedPageElementId) {
+                return function() {
+                    if (angular.isDefined(callback)) {
+                        callback(deletedPageElementId);
+                    }
+                }
+            }
+            this.deletePageElement = function(pageElement) {
                 if (connection.isConnected && localElementsToBeDeletedIds.indexOf(pageElement.pageElementId) < 0) {
                     connection.deletePageElement(pageElement, undefined, function() {
                         logService.logDebug('Persistence: Deleting element "' + pageElement.pageElementId +
                             '" of type ' + pageElement.pageElementType + ' has failed, storing deletion for later');
                         localElementsToBeDeletedIds.push(pageElement.pageElementId);
-                        localStorageService.deletePageElement(pageElement.pageElementId, callback);
+                        localStorageService.deletePageElement(pageElement.pageElementId,
+                            deletePageElementWrapper(getWrappedEventHandlerDescriptor('pageElementDeleted'),
+                                pageElement.pageElementId));
                     });
                 } else {
                     if (localElementsToBeDeletedIds.indexOf(pageElement.pageElementId) < 0) {
@@ -136,11 +161,13 @@ angular.module('colledit.persistenceServices', [])
                     }
                     logService.logDebug('Persistence: Deleting element "' + pageElement.pageElementId +
                         '" when not connected');
-                    localStorageService.deletePageElement(pageElement.pageElementId, callback);
+                    localStorageService.deletePageElement(pageElement.pageElementId,
+                        deletePageElementWrapper(registerEventHandlerDescriptors['pageElementDeleted'],
+                            pageElement.pageElementId));
                 }
             };
 
-            var deletingAllPageElementsAndStoringThemForLaterReconciliation = function() {
+            var deletingAllPageElementsAndStoringThemForLaterReconciliation = function(callback) {
                 localStorageService.listAllPageElements(function (pageElements) {
                     localElementsToBeDeletedIds.push.apply(
                         localElementsToBeDeletedIds, _.pluck(pageElements, 'pageElementId'));
@@ -149,15 +176,17 @@ angular.module('colledit.persistenceServices', [])
                 localStorageService.deleteAllPageElements(callback);
             };
 
-            this.deleteAllPageElements = function(callback) {
+            this.deleteAllPageElements = function() {
                 if (connection.isConnected) {
                     connection.deleteAllPageElements(undefined, function() {
                         logService.logDebug('Persistence: Deleting all elements has failed, storing deletions for later');
-                        deletingAllPageElementsAndStoringThemForLaterReconciliation();
+                        deletingAllPageElementsAndStoringThemForLaterReconciliation(
+                            getWrappedEventHandlerDescriptor('allPageElementsDeleted'));
                     });
                 } else {
                     logService.logDebug('Persistence: Deleting all elements when not connected, storing deletions for later');
-                    deletingAllPageElementsAndStoringThemForLaterReconciliation();
+                    deletingAllPageElementsAndStoringThemForLaterReconciliation(
+                        registerEventHandlerDescriptors['allPageElementsDeleted']);
                 }
             };
         }

@@ -67,21 +67,32 @@ var logError = function(message) {
     console.error(new Date().toLocaleTimeString() + ' - ' + message);
 };
 
+var uuid = function () {
+    var S4 = function () {
+        return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+    };
+    return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
+};
+
 /*********** SocketIO part **************/
 
 io.sockets.on('connection', function (socket) {
+    var clientId = uuid();
+    var logPrefix = 'Client ' + clientId + ' - ';
+    log(logPrefix + 'Connected');
+
 	socket.on('getAllPageElements', function (callback) {
         if (callback) {
             var pageElements = _.values(getAllPageElements());
-            log('Listing all ' + pageElements.length + ' elements');
+            log(logPrefix + 'Listing all ' + pageElements.length + ' elements');
             callback({status: 200, pageElements: pageElements});
         }
 	}).on('savePageElement', function (pageElementToSave, callback) {
-        log('Saving pageElement "' + pageElementToSave.pageElementId +
+        log(logPrefix + 'Saving pageElement "' + pageElementToSave.pageElementId +
             '" of type ' + pageElementToSave.pageElementType);
         var pageElementSaved = savePageElement(pageElementToSave);
         if (pageElementSaved) {
-            log('Saved pageElement "' + pageElementToSave.pageElementId +
+            log(logPrefix + 'Saved pageElement "' + pageElementToSave.pageElementId +
                 '" of type ' + pageElementToSave.pageElementType);
 			io.sockets.emit('pageElementSaved', pageElementToSave);
 		}
@@ -94,10 +105,10 @@ io.sockets.on('connection', function (socket) {
         }
 	})
 	.on('deletePageElement', function (pageElementToDeleteId, callback) {
-        log('Deleting pageElement "' + pageElementToDeleteId + '"');
+        log(logPrefix + 'Deleting pageElement "' + pageElementToDeleteId + '"');
         var pageElementDeleted = deletePageElement(pageElementToDeleteId);
         if (pageElementDeleted) {
-            log('Deleted pageElement "' + pageElementToDeleteId + '"');
+            log(logPrefix + 'Deleted pageElement "' + pageElementToDeleteId + '"');
 			io.sockets.emit('pageElementDeleted', pageElementToDeleteId);
 		}
         if (callback && pageElementDeleted) {
@@ -108,10 +119,10 @@ io.sockets.on('connection', function (socket) {
         }
 	})
     .on('deleteAllPageElements', function (callback) {
-        log('Deleting all pageElements');
+        log(logPrefix + 'Deleting all pageElements');
         var allPageElementsDeleted = deleteAllPageElements();
         if (allPageElementsDeleted) {
-            log('Deleted all pageElements');
+            log(logPrefix + 'Deleted all pageElements');
             io.sockets.emit('allPageElementsDeleted');
         }
         if (callback && allPageElementsDeleted) {
@@ -122,7 +133,7 @@ io.sockets.on('connection', function (socket) {
         }
     })
 	.on('disconnect', function(){
-        //TODO
+        log(logPrefix + 'Disconnected');
     });
 });
 
