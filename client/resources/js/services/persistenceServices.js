@@ -117,9 +117,11 @@ angular.module('colledit.persistenceServices', [])
             this.savePageElement = function(pageElement) {
                 if (connection.isConnected && localElementsToBePersistedIds.indexOf(pageElement.pageElementId) < 0) {
                     connection.savePageElement(pageElement, undefined, function() {
-                        logService.logDebug('Persistence: Saving element "' + pageElement.pageElementId +
-                            '" of type ' + pageElement.pageElementType + ' has failed, storing it for later');
-                        localElementsToBePersistedIds.push(pageElement.pageElementId);
+                        if (localElementsToBePersistedIds.indexOf(pageElement.pageElementId) < 0) {
+                            logService.logDebug('Persistence: Saving element "' + pageElement.pageElementId +
+                                '" of type ' + pageElement.pageElementType + ' has failed, storing it for later');
+                            localElementsToBePersistedIds.push(pageElement.pageElementId);
+                        }
                         localStorageService.savePageElement(pageElement,
                             getWrappedEventHandlerDescriptor('pageElementSaved'));
                     });
@@ -142,13 +144,15 @@ angular.module('colledit.persistenceServices', [])
                         callback(deletedPageElementId);
                     }
                 }
-            }
+            };
             this.deletePageElement = function(pageElement) {
                 if (connection.isConnected && localElementsToBeDeletedIds.indexOf(pageElement.pageElementId) < 0) {
                     connection.deletePageElement(pageElement, undefined, function() {
-                        logService.logDebug('Persistence: Deleting element "' + pageElement.pageElementId +
-                            '" of type ' + pageElement.pageElementType + ' has failed, storing deletion for later');
-                        localElementsToBeDeletedIds.push(pageElement.pageElementId);
+                        if (localElementsToBeDeletedIds.indexOf(pageElement.pageElementId) < 0) {
+                            logService.logDebug('Persistence: Deleting element "' + pageElement.pageElementId +
+                                '" of type ' + pageElement.pageElementType + ' has failed, storing deletion for later');
+                            localElementsToBeDeletedIds.push(pageElement.pageElementId);
+                        }
                         localStorageService.deletePageElement(pageElement.pageElementId,
                             deletePageElementWrapper(getWrappedEventHandlerDescriptor('pageElementDeleted'),
                                 pageElement.pageElementId));

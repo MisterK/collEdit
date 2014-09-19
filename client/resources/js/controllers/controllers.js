@@ -3,7 +3,8 @@
 /**** Angular controllers ****/
 
 angular.module('colledit.controllers', [])
-    .controller('CollEditController', function($scope, pageElementsFactory, persistenceService, dataCfg, logService) {
+    .controller('CollEditController', function($scope, pageElementsFactory, persistenceService, dataCfg, logService,
+                                               doesPageElementIdMatch, arePageElementsIdsEqual) {
         $scope.nextPageElementType = undefined;
         $scope.pageElements =  _.reduce(dataCfg.pageElementTypes, function(result, pageElementType) {
             result[pageElementType] = [];
@@ -75,7 +76,7 @@ angular.module('colledit.controllers', [])
 
         $scope.isPageElementSelectedId = function(pageElementId) {
             return angular.isDefined($scope.selectedPageElement)
-                && $scope.selectedPageElement.pageElementId == pageElementId;
+                && doesPageElementIdMatch(pageElementId, $scope.selectedPageElement);
         };
 
         $scope.isPageElementSelected = function(pageElement) {
@@ -137,8 +138,9 @@ angular.module('colledit.controllers', [])
         //Setup persistence
         var pageElementSavedEventHandler = function(savedPageElement) {
             pageElementsFactory.augmentPageElement(savedPageElement);
+            var matchSavedElementId = _.partial(arePageElementsIdsEqual, savedPageElement);
             var indexOfSavedPageElement = _.findIndex($scope.pageElements[savedPageElement.pageElementType],
-                function(pageElement) { return pageElement.pageElementId == savedPageElement.pageElementId; });
+                matchSavedElementId);
             if (indexOfSavedPageElement < 0) {
                 logService.logDebug('Adding element "' + savedPageElement.pageElementId +
                     '" of type ' + savedPageElement.pageElementType + ' received from server');
@@ -156,10 +158,9 @@ angular.module('colledit.controllers', [])
             if (angular.isDefined(deletedPageElementId)) {
                 logService.logDebug('Deleting element "' + deletedPageElementId +
                     '" received from server');
+                var matchDeletedElementId = _.partial(doesPageElementIdMatch, deletedPageElementId);
                 _.forOwn($scope.pageElements, function(pageElementsForType) {
-                    return _.remove(pageElementsForType, function(pageElement) {
-                        return pageElement.pageElementId == deletedPageElementId;
-                    }).length == 0;
+                    return _.remove(pageElementsForType, matchDeletedElementId).length == 0;
                 });
 
                 if ($scope.isPageElementSelectedId(deletedPageElementId)) {
@@ -174,7 +175,7 @@ angular.module('colledit.controllers', [])
             });
             clearPageElementSelection();
         };
-        var scopeApplyWrapper = function(eventHandlerCallback) {
+        var augmentWithScopeApplyWrapper = function(eventHandlerCallback) {
           eventHandlerCallback.scopeApplyWrapper = function() {
               var passedArguments = arguments;
               $scope.$apply(function() {
@@ -184,9 +185,9 @@ angular.module('colledit.controllers', [])
           return eventHandlerCallback;
         };
         var persistence = persistenceService.getPersistence(
-            {'pageElementSaved': scopeApplyWrapper(pageElementSavedEventHandler),
-                'pageElementDeleted': scopeApplyWrapper(pageElementDeletedEventHandler),
-                'allPageElementsDeleted': scopeApplyWrapper(allPageElementsDeletedEventHandler)});
+            {'pageElementSaved': augmentWithScopeApplyWrapper(pageElementSavedEventHandler),
+                'pageElementDeleted': augmentWithScopeApplyWrapper(pageElementDeletedEventHandler),
+                'allPageElementsDeleted': augmentWithScopeApplyWrapper(allPageElementsDeletedEventHandler)});
 
         //Initially get all locally-stored resources
         persistence.listPageElements(function(pageElements) {
