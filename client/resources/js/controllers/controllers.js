@@ -59,7 +59,7 @@ angular.module('colledit.controllers', [])
             displayModifyControlsDialog(pageElement);
         };
 
-        var clearPageElementSelection = function () {
+        var clearPageElementSelection = function() {
             var previouslySelectedElementType = angular.isDefined($scope.selectedPageElement) ?
                 $scope.selectedPageElement.pageElementType : undefined;
             $scope.selectedPageElement = undefined;
@@ -67,7 +67,7 @@ angular.module('colledit.controllers', [])
             return previouslySelectedElementType;
         };
 
-        function clearPageElementSelectionAndRefresh() {
+        var clearPageElementSelectionAndRefresh = function() {
             var previouslySelectedElementType = clearPageElementSelection();
             if (angular.isDefined(previouslySelectedElementType)) {
                 requirePageElementsRefresh(previouslySelectedElementType);
@@ -175,6 +175,17 @@ angular.module('colledit.controllers', [])
             });
             clearPageElementSelection();
         };
+        var allPageElementsListedEventHandler = function(pageElements) {
+             if (!angular.isArray(pageElements) || pageElements.length == 0) {
+                logService.logDebug('No page elements received from server or local storage');
+                 return;
+             }
+             logService.logDebug('Listing all ' + pageElements.length +
+                ' elements received from server or local storage');
+             _(pageElements).forEach(function(pageElement) {
+                 pageElementSavedEventHandler(pageElement);
+             });
+         };
         var augmentWithScopeApplyWrapper = function(eventHandlerCallback) {
           eventHandlerCallback.scopeApplyWrapper = function() {
               var passedArguments = arguments;
@@ -187,25 +198,8 @@ angular.module('colledit.controllers', [])
         var persistence = persistenceService.getPersistence(
             {'pageElementSaved': augmentWithScopeApplyWrapper(pageElementSavedEventHandler),
                 'pageElementDeleted': augmentWithScopeApplyWrapper(pageElementDeletedEventHandler),
-                'allPageElementsDeleted': augmentWithScopeApplyWrapper(allPageElementsDeletedEventHandler)});
-
-        //Initially get all locally-stored resources
-        persistence.listPageElements(function(pageElements) {
-            logService.logDebug('Listing all ' + pageElements.length + ' elements received from server');
-            if (!angular.isArray(pageElements) || pageElements.length == 0) {
-                return;
-            }
-            //TODO to remove? $scope.$apply(function() {
-                _(pageElements).groupBy(function (pageElement) {
-                    return pageElement.pageElementType;
-                }).forEach(function (pageElementsByType, pageElementType) {
-                        _.forEach(pageElementsByType, function (pageElement) {
-                            pageElementsFactory.augmentPageElement(pageElement);
-                            $scope.pageElements[pageElementType].push(pageElement);
-                        });
-                    });
-            //});
-        });
+                'allPageElementsDeleted': augmentWithScopeApplyWrapper(allPageElementsDeletedEventHandler),
+                'allPageElementsListed': augmentWithScopeApplyWrapper(allPageElementsListedEventHandler)});
 
         var persistPageElement = function(pageElement) {
             persistence.savePageElement(pageElement);

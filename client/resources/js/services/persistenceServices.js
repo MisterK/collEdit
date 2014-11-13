@@ -62,7 +62,7 @@ angular.module('colledit.persistenceServices', [])
 
             var executeWrappedEventHandlerDescriptor = function(eventHandlerDescriptorKey, serverResponse) {
                 var wrappedEventHandlerDescriptor = getWrappedEventHandlerDescriptor(eventHandlerDescriptorKey);
-                if (angular.isDefined(wrappedEventHandlerDescriptor)) {
+                if (angular.isFunction(wrappedEventHandlerDescriptor)) {
                     wrappedEventHandlerDescriptor(serverResponse);
                 }
             };
@@ -90,10 +90,18 @@ angular.module('colledit.persistenceServices', [])
                 executeWrappedEventHandlerDescriptor('allPageElementsDeleted', serverResponse);
             };
 
+            var connectedToServerEventHandler = function() {
+                logService.logDebug('Persistence: Connected to server, listing all page elements from server');
+                listPageElements(function(pageElements) {
+                    executeWrappedEventHandlerDescriptor('allPageElementsListed', pageElements);
+                });
+            }
+
             connection.connectToServerEventsWithListeners(
                 {'pageElementSaved': pageElementSavedEventHandler,
                     'pageElementDeleted': pageElementDeletedEventHandler,
-                    'allPageElementsDeleted': allPageElementsDeletedEventHandler});
+                    'allPageElementsDeleted': allPageElementsDeletedEventHandler},
+                {'connectedToServer': connectedToServerEventHandler});
 
             var persistPageElementsOutOfSync = function() {
                 if (connection.isConnected && localElementsToBePersistedIds.length > 0) {
@@ -122,7 +130,7 @@ angular.module('colledit.persistenceServices', [])
             };
             setInterval(deletePageElementsOutOfSync, persistenceCfg.deletePageElementsOutOfSyncRefreshTime);
 
-            this.listPageElements = function(callback) {
+            var listPageElements = function(callback) {
                 if (connection.isConnected) {
                     connection.listPageElements(function(serverPageElements) {
                         logService.logDebug('Persistence: Listing all ' + serverPageElements.length +

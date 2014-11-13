@@ -1,7 +1,7 @@
-- Call callback on socketio connect/reconnect, so that relist elements from server => no need to do it in the controller
+- Versioning by lastUpdateDate
+- Maintain list of deletedElementIds, on both client and server sides
 - child controller for text edition dialog
 - double-click for child edition
-- Versioning
 - More element types
     -> image
     -> non-SVG mode
@@ -29,7 +29,7 @@ DONE
 - Normalized pageElementId matching
 - Periodically send persistence/deletion of elements out of sync with server (as part of client-side reconciliation on server connect/reconnect)
 - Server: propagate deletion of unknown element, as it could have been deleted while server was offline
-
+- Call callback on socketio connect/reconnect, so that relist elements from server (as part of client-side reconciliation on server connect/reconnect)
 
 BUGS
 ----------

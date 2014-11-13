@@ -15,7 +15,8 @@ angular.module('colledit.ioAngularServices', [])
             var thisConnection = this;
             this.isConnected = false;
 
-            this.connectToServerEventsWithListeners = function(registerEventHandlerDescriptors) {
+            this.connectToServerEventsWithListeners = function(registerEventHandlerDescriptors,
+                                                                internalEventHandlerDescriptors) {
                 if (!angular.isDefined($window.io)) {
                     return this;
                 }
@@ -29,10 +30,15 @@ angular.module('colledit.ioAngularServices', [])
                         eventHandlerFunction(serverResponse);
                     });
                 });
+                var triggerConnectedToServerCallback = function() {
+                    if (angular.isFunction(internalEventHandlerDescriptors['connectedToServer'])) {
+                        internalEventHandlerDescriptors['connectedToServer']();
+                    }
+                };
                 socket.on('connect', function() {
                     logService.log('Connected to server');
                     thisConnection.isConnected = true;
-                    //TODO on reconnect, trigger callback to re-list page elements from server
+                    triggerConnectedToServerCallback();
                 });
                 socket.on('connect_error', function(error) {
                     logService.logError('Could not connect to server "' + error + '", will retry soon');
@@ -45,7 +51,7 @@ angular.module('colledit.ioAngularServices', [])
                 socket.on('reconnect', function(attempt) {
                     logService.log('Re-connected to server after ' + attempt + ' attempts');
                     thisConnection.isConnected = true;
-                    //TODO on reconnect, trigger callback to re-list page elements from server
+                    triggerConnectedToServerCallback();
                 });
                 socket.on('reconnect_failed', function() {
                     logService.logError('Could not re-connect to server, will retry soon');
