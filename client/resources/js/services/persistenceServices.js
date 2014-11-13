@@ -3,8 +3,10 @@
 /**** Lawnchair-related angular services ****/
 
 angular.module('colledit.persistenceServices', [])
-    /* Return the localStorage configuration */
-    .constant('localStorageCfg', {
+    /* Return the persistence configuration */
+    .constant('persistenceCfg', {
+        'persistPageElementsOutOfSyncRefreshTime': 5000,
+        'deletePageElementsOutOfSyncRefreshTime': 5000
     })
     /* Wrapper to the lawnchair singleton */
     .factory('lawnchairService', function($window) {
@@ -19,6 +21,10 @@ angular.module('colledit.persistenceServices', [])
     })
     .service('localStorageService', function(lawnchairService) {
         var lawnchairStorage = lawnchairService.getLawnchairStorage(_.noop);
+
+        this.getPageElement = function(pageElementId, callback) {
+            lawnchairStorage.get(pageElementId, callback);
+        };
 
         this.savePageElement = function(pageElement, callback) {
             lawnchairStorage.save(pageElement, callback);
@@ -36,7 +42,8 @@ angular.module('colledit.persistenceServices', [])
             return lawnchairStorage.nuke(callback);
         };
     })
-    .factory('persistenceService', function(serverCommunicationService, localStorageService, logService) {
+    .factory('persistenceService', function(persistenceCfg, serverCommunicationService, localStorageService,
+                                            logService, doPageElementsIdsMatch) {
         function Persistence(registerEventHandlerDescriptors) {
             var connection = serverCommunicationService.getServerConnection();
             var localElementsToBePersistedIds = [],
@@ -88,21 +95,58 @@ angular.module('colledit.persistenceServices', [])
                     'pageElementDeleted': pageElementDeletedEventHandler,
                     'allPageElementsDeleted': allPageElementsDeletedEventHandler});
 
+            var persistPageElementsOutOfSync = function() {
+                if (connection.isConnected && localElementsToBePersistedIds.length > 0) {
+                    logService.logDebug('Persistence: Sending save requests to server for elements out of sync');
+                    _.forEach(localElementsToBePersistedIds, function(localElementToBePersistedId) {
+                        localStorageService.getPageElement(localElementToBePersistedId, function(localElementToBePersisted) {
+                            if (angular.isDefined(localElementToBePersisted) && localElementToBePersisted != null) {
+                                savePageElementInServer(localElementToBePersisted, false);
+                            } else {
+                                var matchElementToPersist = _.partial(doPageElementsIdsMatch, localElementToBePersistedId);
+                                _.remove(localElementsToBePersistedIds, matchElementToPersist);
+                            }
+                        });
+                    });
+                }
+            };
+            setInterval(persistPageElementsOutOfSync, persistenceCfg.persistPageElementsOutOfSyncRefreshTime);
+
+            var deletePageElementsOutOfSync = function() {
+                if (connection.isConnected && localElementsToBeDeletedIds.length > 0) {
+                    logService.logDebug('Persistence: Sending delete requests to server for elements out of sync');
+                    _.forEach(localElementsToBeDeletedIds, function(localElementToBeDeletedId) {
+                        deletePageElementInServer(localElementToBeDeletedId, false);
+                    });
+                }
+            };
+            setInterval(deletePageElementsOutOfSync, persistenceCfg.deletePageElementsOutOfSyncRefreshTime);
+
             this.listPageElements = function(callback) {
                 if (connection.isConnected) {
-                    connection.listPageElements(function(pageElements) {
-                        logService.logDebug('Persistence: Listing all ' + pageElements.length +
+                    connection.listPageElements(function(serverPageElements) {
+                        logService.logDebug('Persistence: Listing all ' + serverPageElements.length +
                             ' elements received from server');
-                        if (angular.isArray(pageElements)) {
-                            _.forEach(pageElements, function(pageElement) {
-                                localStorageService.savePageElement(pageElement);
+                        if (angular.isArray(serverPageElements)) {
+                            _.forEach(serverPageElements, function(serverPageElement) {
+                                if (localElementsToBeDeletedIds.indexOf(serverPageElement.pageElementId) < 0) {
+                                    localStorageService.savePageElement(serverPageElement);
+                                }
                             });
                         }
-                        //TODO determine here which elements are not known from the server yet and try to persist them
-                        //TODO determine here which updated elements are not updated yet from the server yet and try to update them
-                        //TODO determine here which deleted elements are not deleted yet from the server yet and try to delete them
-                        //TODO get list of deleted elements ids from the server and delete them here if necessary
-                        localStorageService.listAllPageElements(callback);
+                        //TODO When implemented in the server, get list of deleted elements ids from the server and schedule them for deletion, or remove them from localElementsToBePersistedIds
+                        localStorageService.listAllPageElements(function(localPageElements) {
+                            _.forEach(localPageElements, function(localPageElement) {
+                                var matchLocalElementId = _.partial(doPageElementsIdsMatch, localPageElement);
+                                if (!angular.isDefined(_.find(serverPageElements, matchLocalElementId))
+                                    && localElementsToBePersistedIds.indexOf(localPageElement.pageElementId) < 0) {
+                                    //Determine here which elements are not known from the server yet, and schedule them for persistence
+                                    localElementsToBePersistedIds.push(localPageElement.pageElementId);
+                                }
+                                //TODO When versioning implemented, determine here which updated elements are not updated yet from the server yet and schedule them for persistence
+                            });
+                            (callback || _.noop)(localPageElements);
+                        });
                     }, function() {
                         logService.logError('Persistence: Listing all elements received' +
                             ' from server failed, defaulting to local storage');
@@ -114,17 +158,23 @@ angular.module('colledit.persistenceServices', [])
                 }
             };
 
-            this.savePageElement = function(pageElement) {
-                if (connection.isConnected && localElementsToBePersistedIds.indexOf(pageElement.pageElementId) < 0) {
-                    connection.savePageElement(pageElement, undefined, function() {
-                        if (localElementsToBePersistedIds.indexOf(pageElement.pageElementId) < 0) {
-                            logService.logDebug('Persistence: Saving element "' + pageElement.pageElementId +
-                                '" of type ' + pageElement.pageElementType + ' has failed, storing it for later');
-                            localElementsToBePersistedIds.push(pageElement.pageElementId);
-                        }
+            var savePageElementInServer = function(pageElementToSave, storeLocallyOnFailure) {
+                connection.savePageElement(pageElementToSave, function() {
+                    var matchElementToSave = _.partial(doPageElementsIdsMatch, pageElementToSave);
+                    _.remove(localElementsToBePersistedIds, matchElementToSave);
+                }, function() {
+                    if (storeLocallyOnFailure) {
+                        logService.logDebug('Persistence: Saving element "' + pageElement.pageElementId +
+                            '" of type ' + pageElement.pageElementType + ' has failed, storing it for later');
+                        localElementsToBePersistedIds.push(pageElement.pageElementId);
                         localStorageService.savePageElement(pageElement,
                             getWrappedEventHandlerDescriptor('pageElementSaved'));
-                    });
+                    }
+                });
+            };
+            this.savePageElement = function(pageElement) {
+                if (connection.isConnected && localElementsToBePersistedIds.indexOf(pageElement.pageElementId) < 0) {
+                    savePageElementInServer(pageElement, true);
                 } else {
                     if (localElementsToBePersistedIds.indexOf(pageElement.pageElementId) < 0) {
                         logService.logDebug('Persistence: Saving element "' + pageElement.pageElementId +
@@ -145,18 +195,25 @@ angular.module('colledit.persistenceServices', [])
                     }
                 }
             };
+
+            var deletePageElementInServer = function(pageElementToDeleteId, storeLocallyOnFailure) {
+                connection.deletePageElement(pageElementToDeleteId, function() {
+                    var matchElementToDeleteId = _.partial(doPageElementsIdsMatch, pageElementToDeleteId);
+                    _.remove(localElementsToBeDeletedIds, matchElementToDeleteId);
+                }, function() {
+                    if (storeLocallyOnFailure) {
+                        logService.logDebug('Persistence: Deleting element "' + pageElementToDeleteId +
+                            ' has failed, storing deletion for later');
+                        localElementsToBeDeletedIds.push(pageElementToDeleteId);
+                        localStorageService.deletePageElement(pageElementToDeleteId,
+                            deletePageElementWrapper(getWrappedEventHandlerDescriptor('pageElementDeleted'),
+                                pageElementToDeleteId));
+                    }
+                });
+            };
             this.deletePageElement = function(pageElement) {
                 if (connection.isConnected && localElementsToBeDeletedIds.indexOf(pageElement.pageElementId) < 0) {
-                    connection.deletePageElement(pageElement, undefined, function() {
-                        if (localElementsToBeDeletedIds.indexOf(pageElement.pageElementId) < 0) {
-                            logService.logDebug('Persistence: Deleting element "' + pageElement.pageElementId +
-                                '" of type ' + pageElement.pageElementType + ' has failed, storing deletion for later');
-                            localElementsToBeDeletedIds.push(pageElement.pageElementId);
-                        }
-                        localStorageService.deletePageElement(pageElement.pageElementId,
-                            deletePageElementWrapper(getWrappedEventHandlerDescriptor('pageElementDeleted'),
-                                pageElement.pageElementId));
-                    });
+                    deletePageElementInServer(pageElement.pageElementId, true);
                 } else {
                     if (localElementsToBeDeletedIds.indexOf(pageElement.pageElementId) < 0) {
                         logService.logDebug('Persistence: Deleting element "' + pageElement.pageElementId +
@@ -169,6 +226,9 @@ angular.module('colledit.persistenceServices', [])
                         deletePageElementWrapper(registerEventHandlerDescriptors['pageElementDeleted'],
                             pageElement.pageElementId));
                 }
+                //Remove for elements to be persisted anyway
+                var matchElementToDelete = _.partial(doPageElementsIdsMatch, pageElement);
+                _.remove(localElementsToBePersistedIds, matchElementToDelete);
             };
 
             var deletingAllPageElementsAndStoringThemForLaterReconciliation = function(callback) {

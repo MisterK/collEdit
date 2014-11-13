@@ -28,14 +28,10 @@ angular.module('colledit.dataAngularServices', [])
         },
         pageElementTypes: ['svgText', 'svgCircle', 'svgRect']
     })
-    .constant('arePageElementsIdsEqual', function(pageElement1, pageElement2) {
-        return angular.isDefined(pageElement1) ?
-            (angular.isDefined(pageElement2) ? pageElement1.pageElementId == pageElement2.pageElementId : false)
-            : !angular.isDefined(pageElement2);
-    })
-    .constant('doesPageElementIdMatch', function(expectedPageElementId, pageElement) {
-        return angular.isDefined(pageElement) ?
-            pageElement.pageElementId == expectedPageElementId : !angular.isDefined(expectedPageElementId);
+    .constant('doPageElementsIdsMatch', function (pageElementOrId1, pageElementOrId2) {
+        var pageElementId1 = angular.isObject(pageElementOrId1) ? pageElementOrId1.pageElementId : pageElementOrId1;
+        var pageElementId2 = angular.isObject(pageElementOrId2) ? pageElementOrId2.pageElementId : pageElementOrId2;
+        return pageElementId1 === pageElementId2;
     })
     .service('pageElementsFactory', function(dataCfg) {
         this.createPageElement = function(pageElementType, coordinates, params) {

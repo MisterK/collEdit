@@ -32,6 +32,7 @@ angular.module('colledit.ioAngularServices', [])
                 socket.on('connect', function() {
                     logService.log('Connected to server');
                     thisConnection.isConnected = true;
+                    //TODO on reconnect, trigger callback to re-list page elements from server
                 });
                 socket.on('connect_error', function(error) {
                     logService.logError('Could not connect to server "' + error + '", will retry soon');
@@ -44,6 +45,7 @@ angular.module('colledit.ioAngularServices', [])
                 socket.on('reconnect', function(attempt) {
                     logService.log('Re-connected to server after ' + attempt + ' attempts');
                     thisConnection.isConnected = true;
+                    //TODO on reconnect, trigger callback to re-list page elements from server
                 });
                 socket.on('reconnect_failed', function() {
                     logService.logError('Could not re-connect to server, will retry soon');
@@ -88,8 +90,8 @@ angular.module('colledit.ioAngularServices', [])
                 });
             };
 
-            this.deletePageElement = function(pageElement, successCallback, errorCallback) {
-                emitEvent('deletePageElement', pageElement.pageElementId, function(response) {
+            this.deletePageElement = function(pageElementId, successCallback, errorCallback) {
+                emitEvent('deletePageElement', pageElementId, function(response) {
                     if (response.status == 200) {
                         (successCallback || _.noop)();
                     } else {

@@ -4,7 +4,7 @@
 
 angular.module('colledit.controllers', [])
     .controller('CollEditController', function($scope, pageElementsFactory, persistenceService, dataCfg, logService,
-                                               doesPageElementIdMatch, arePageElementsIdsEqual) {
+                                               doPageElementsIdsMatch) {
         $scope.nextPageElementType = undefined;
         $scope.pageElements =  _.reduce(dataCfg.pageElementTypes, function(result, pageElementType) {
             result[pageElementType] = [];
@@ -76,7 +76,7 @@ angular.module('colledit.controllers', [])
 
         $scope.isPageElementSelectedId = function(pageElementId) {
             return angular.isDefined($scope.selectedPageElement)
-                && doesPageElementIdMatch(pageElementId, $scope.selectedPageElement);
+                && doPageElementsIdsMatch(pageElementId, $scope.selectedPageElement);
         };
 
         $scope.isPageElementSelected = function(pageElement) {
@@ -138,7 +138,7 @@ angular.module('colledit.controllers', [])
         //Setup persistence
         var pageElementSavedEventHandler = function(savedPageElement) {
             pageElementsFactory.augmentPageElement(savedPageElement);
-            var matchSavedElementId = _.partial(arePageElementsIdsEqual, savedPageElement);
+            var matchSavedElementId = _.partial(doPageElementsIdsMatch, savedPageElement);
             var indexOfSavedPageElement = _.findIndex($scope.pageElements[savedPageElement.pageElementType],
                 matchSavedElementId);
             if (indexOfSavedPageElement < 0) {
@@ -158,7 +158,7 @@ angular.module('colledit.controllers', [])
             if (angular.isDefined(deletedPageElementId)) {
                 logService.logDebug('Deleting element "' + deletedPageElementId +
                     '" received from server');
-                var matchDeletedElementId = _.partial(doesPageElementIdMatch, deletedPageElementId);
+                var matchDeletedElementId = _.partial(doPageElementsIdsMatch, deletedPageElementId);
                 _.forOwn($scope.pageElements, function(pageElementsForType) {
                     return _.remove(pageElementsForType, matchDeletedElementId).length == 0;
                 });

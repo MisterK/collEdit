@@ -1,4 +1,4 @@
-- Client-side reconciliation attempts on server connect/reconnect
+- Call callback on socketio connect/reconnect, so that relist elements from server => no need to do it in the controller
 - child controller for text edition dialog
 - double-click for child edition
 - Versioning
@@ -26,6 +26,9 @@ DONE
         => font-weight
         => text-decoration
 - Handle socketio error events
+- Normalized pageElementId matching
+- Periodically send persistence/deletion of elements out of sync with server (as part of client-side reconciliation on server connect/reconnect)
+- Server: propagate deletion of unknown element, as it could have been deleted while server was offline
 
 
 BUGS

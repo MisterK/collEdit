@@ -109,13 +109,15 @@ io.sockets.on('connection', function (socket) {
         var pageElementDeleted = deletePageElement(pageElementToDeleteId);
         if (pageElementDeleted) {
             log(logPrefix + 'Deleted pageElement "' + pageElementToDeleteId + '"');
-			io.sockets.emit('pageElementDeleted', pageElementToDeleteId);
-		}
-        if (callback && pageElementDeleted) {
-            callback({status: 200});
         } else {
-            logError('PageElement "' + pageElementToDeleteId + '" could not be deleted, as it was not found');
-            callback({status: 500, message: 'Page element could not be deleted, as it was not found'});
+            log('PageElement "' + pageElementToDeleteId + '" could not be deleted, as it was not found,'
+                + ' but event still sent to clients as it could have been deleted while server was offline');
+        }
+
+        io.sockets.emit('pageElementDeleted', pageElementToDeleteId);
+
+        if (callback) {
+            callback({status: 200});
         }
 	})
     .on('deleteAllPageElements', function (callback) {
