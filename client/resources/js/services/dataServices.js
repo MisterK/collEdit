@@ -37,11 +37,11 @@ angular.module('colledit.dataAngularServices', [])
         this.createPageElement = function(pageElementType, coordinates, params) {
             switch (pageElementType) {
                 case 'svgText':
-                    return new TextPageElement().init(coordinates, params);
+                    return new TextPageElement(coordinates, params);
                 case 'svgCircle':
-                    return new CirclePageElement().init(coordinates, params);
+                    return new CirclePageElement(coordinates, params);
                 case 'svgRect':
-                    return new RectanglePageElement().init(coordinates, params);
+                    return new RectanglePageElement(coordinates, params);
             }
         };
 
@@ -66,24 +66,37 @@ angular.module('colledit.dataAngularServices', [])
         };
 
         var uuid = function () {
-            var S4 = function () {
+            var s4 = function () {
                 return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
             };
-            return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
+            return (s4()+s4()+"-"+s4()+"-"+s4()+"-"+s4()+"-"+s4()+s4()+s4());
         };
 
-        function PageElement() {
-        }
+        var compose = function() { //Thanks to http://javascript.boxsheep.com/how-to-javascript/How-to-write-a-compose-function/
+            var fn = arguments, origLength = fn.length;
+            return function() {
+                var thisObject = this, length = origLength;
+                return (function recursion(arg) {
+                    var newArgs = (arguments.length == 1 && angular.isArray(arguments[0]) ? arguments[0] : arguments);
+                    return length ? recursion(fn[--length].apply(thisObject, newArgs)) : arg;
+                }).apply(thisObject, arguments);
+            };
+        };
 
-        //TODO remove this
-        PageElement.prototype.superInit_ = function(pageElementType, coordinates, params) {
-            if (!angular.isDefined(params)) {
-                params = {};
+        var oooInherit = function(parentConstructorFn, preParentConstructionFn, postParentConstructionFn) {
+            var childConstructorFn = compose(postParentConstructionFn, parentConstructorFn, preParentConstructionFn);
+            childConstructorFn.prototype = _.create(parentConstructorFn.prototype, {'constructor': childConstructorFn});
+            return childConstructorFn;
+        };
+
+        var PageElement = function(coordinates, params) {
+            if (!angular.isDefined(coordinates) || !angular.isDefined(params)) {
+                return this;
             }
+
             this.pageElementId = uuid();
             this.key = this.pageElementId;
             this.version = 0;
-            this.pageElementType = pageElementType;
             this.x = coordinates[0];
             this.y = coordinates[1];
             this.fill = dataCfg.pageElements.defaultFill;
@@ -92,6 +105,7 @@ angular.module('colledit.dataAngularServices', [])
                 this.togglableProperties.push.apply(this.togglableProperties, params.togglableProperties);
             }
             this.isTextual = angular.isDefined(params.isTextual) ? params.isTextual : false;
+
             return this;
         };
 
@@ -110,30 +124,29 @@ angular.module('colledit.dataAngularServices', [])
             }
         };
 
-        function TextPageElement() {
-            if (!(this instanceof TextPageElement)) return new TextPageElement();
-        }
+        var TextPageElement = oooInherit(PageElement,
+            function(coordinates, params) {
+                this.pageElementType = 'svgText';
 
-        TextPageElement.prototype = new PageElement;
+                var newParams = _.extend({
+                    togglableProperties: ['fontSize', 'fontWeight', 'fontStyle', 'textDecoration'],
+                    isTextual: true
+                }, params);
 
-        TextPageElement.prototype.init = function(coordinates, params) {
-            params = _.extend({
-                togglableProperties: ['fontSize', 'fontWeight', 'fontStyle', 'textDecoration'],
-                isTextual: true
-            }, params);
+                return [coordinates, newParams];
+            },
+            function() {
+                _.forEach(['contents', 'fontSize', 'fontStyle', 'fontWeight', 'textDecoration'],
+                    function(propertyName) {
+                        this[propertyName] = dataCfg.pageElements.propertiesDefaults[propertyName];
+                    }, this);
 
-            this.superInit_('svgText', coordinates, params);
+                this.centerX = this.x;
+                this.centerY = this.y;
 
-            _.forEach(['contents', 'fontSize', 'fontStyle', 'fontWeight', 'textDecoration'],
-                function(propertyName) {
-                    this[propertyName] = dataCfg.pageElements.propertiesDefaults[propertyName];
-                }, this);
-
-            this.centerX = this.x;
-            this.centerY = this.y;
-
-            return this;
-        };
+                return this;
+            }
+        );
 
         TextPageElement.prototype.toggleSize = function() {
             this.toggleProperty('fontSize');
@@ -143,54 +156,53 @@ angular.module('colledit.dataAngularServices', [])
             this.contents = newContents;
         };
 
-        function CirclePageElement() {
-            if (!(this instanceof CirclePageElement)) return new CirclePageElement();
-        }
+        var CirclePageElement = oooInherit(PageElement,
+            function(coordinates, params) {
+                this.pageElementType = 'svgCircle';
 
-        CirclePageElement.prototype = new PageElement;
+                var newParams =_.extend({
+                    togglableProperties: ['radius']
+                }, params);
 
-        CirclePageElement.prototype.init = function(coordinates, params) {
-            params = _.extend({
-                togglableProperties: ['radius']
-            }, params);
+                return [coordinates, newParams];
+            },
+            function() {
+                this.radius = dataCfg.pageElements.propertiesDefaults['radius'];
+                this.centerX = this.x;
+                this.centerY = this.y;
 
-            this.superInit_('svgCircle', coordinates, params);
-
-            this.radius = dataCfg.pageElements.propertiesDefaults['radius'];
-            this.centerX = this.x;
-            this.centerY = this.y;
-
-            return this;
-        };
+                return this;
+            }
+        );
 
         CirclePageElement.prototype.toggleSize = function() {
             this.toggleProperty('radius');
         };
 
-        function RectanglePageElement() {
-            if (!(this instanceof RectanglePageElement)) return new RectanglePageElement();
-        }
+        var RectanglePageElement = oooInherit(PageElement,
+            function(coordinates, params) {
+                this.pageElementType = 'svgRect';
 
-        RectanglePageElement.prototype = new PageElement;
+                this.width = dataCfg.pageElements.propertiesDefaults['width'];
+                this.height = dataCfg.pageElements.propertiesDefaults['height'];
 
-        RectanglePageElement.prototype.init = function(coordinates, params) {
-            params = _.extend({
-                togglableProperties: ['width', 'height']
-            }, params);
+                if (angular.isArray(coordinates) && coordinates.length >= 2) {
+                    this.centerX = coordinates[0];
+                    this.centerY = coordinates[1];
+                    coordinates[0] = coordinates[0] - (this.width / 2);
+                    coordinates[1] = coordinates[1] - (this.height / 2);
+                }
 
-            this.width = dataCfg.pageElements.propertiesDefaults['width'];
-            this.height = dataCfg.pageElements.propertiesDefaults['height'];
+                var newParams = _.extend({
+                    togglableProperties: ['width', 'height']
+                }, params);
 
-            if (angular.isArray(coordinates) && coordinates.length >= 2) {
-                this.centerX = coordinates[0];
-                this.centerY = coordinates[1];
-                coordinates[0] = coordinates[0] - (this.width / 2);
-                coordinates[1] = coordinates[1] - (this.height / 2);
+                return [coordinates, newParams];
+            },
+            function() {
+                return this;
             }
-            this.superInit_('svgRect', coordinates, params);
-
-            return this;
-        };
+        );
 
         RectanglePageElement.prototype.toggleSize = function() {
             this.toggleProperty('width');

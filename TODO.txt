@@ -1,10 +1,11 @@
-- Versioning by lastUpdateDate
+- Versioning by lastUpdateDate or ETAG
 - Maintain list of deletedElementIds, on both client and server sides
+- Use _.defaults() to simplify PageElement instantiation
 - child controller for text edition dialog
 - double-click for child edition
 - More element types
     -> image
-    -> non-SVG mode
+    -> non-SVG mode (HTML)
 - Keyboard shortcuts
 
 DONE
@@ -30,9 +31,9 @@ DONE
 - Periodically send persistence/deletion of elements out of sync with server (as part of client-side reconciliation on server connect/reconnect)
 - Server: propagate deletion of unknown element, as it could have been deleted while server was offline
 - Call callback on socketio connect/reconnect, so that relist elements from server (as part of client-side reconciliation on server connect/reconnect)
+- Fix PageElement prototype inheritance
 
 BUGS
 ----------
 - Use deep collection watch instead of events
-- Fix PageElement prototype inheritance
 - Fix D3 functions by type to remove grouping by type in scope
