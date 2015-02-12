@@ -1,5 +1,4 @@
 - Versioning by lastUpdateDate or ETAG
-- Maintain list of deletedElementIds, on both client and server sides
 - Use _.defaults() to simplify PageElement instantiation
 - child controller for text edition dialog
 - double-click for child edition
@@ -32,8 +31,10 @@ DONE
 - Server: propagate deletion of unknown element, as it could have been deleted while server was offline
 - Call callback on socketio connect/reconnect, so that relist elements from server (as part of client-side reconciliation on server connect/reconnect)
 - Fix PageElement prototype inheritance
+- Maintain list of deletedElementIds, on both client and server sides
 
 BUGS
 ----------
 - Use deep collection watch instead of events
 - Fix D3 functions by type to remove grouping by type in scope
+- Use specific D3 CSS selector to only refresh what's needed

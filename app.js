@@ -5,7 +5,8 @@ var port = 3000,
     server = require('http').createServer(app),
 	io = require('socket.io').listen(server, { log: false }),
     _ = require('./client/resources/js/libs/lodash-v2.4.1'),
-	pageElements = {};
+	pageElements = {},
+    deletedElementIds = [];
 
 //Read server port from input args
 _(process.argv)
@@ -35,6 +36,7 @@ var savePageElement = function(pageElementToSave) {
 };
 
 var deletePageElement = function(pageElementToDeleteId) {
+    deletedElementIds.push(pageElementToDeleteId);
     if (getPageElement(pageElementToDeleteId)) {
         delete pageElements[pageElementToDeleteId];
         return true;
@@ -68,10 +70,10 @@ var logError = function(message) {
 };
 
 var uuid = function () {
-    var S4 = function () {
+    var s4 = function () {
         return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
     };
-    return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
+    return (s4()+s4()+"-"+s4()+"-"+s4()+"-"+s4()+"-"+s4()+s4()+s4());
 };
 
 /*********** SocketIO part **************/
@@ -85,7 +87,7 @@ io.sockets.on('connection', function (socket) {
         if (callback) {
             var pageElements = _.values(getAllPageElements());
             log(logPrefix + 'Listing all ' + pageElements.length + ' elements');
-            callback({status: 200, pageElements: pageElements});
+            callback({status: 200, pageElements: pageElements, deletedElementIds: deletedElementIds});
         }
 	}).on('savePageElement', function (pageElementToSave, callback) {
         log(logPrefix + 'Saving pageElement "' + pageElementToSave.pageElementId +

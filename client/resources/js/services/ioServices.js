@@ -79,7 +79,7 @@ angular.module('colledit.ioAngularServices', [])
             this.listPageElements = function(successCallback, errorCallback) {
                 emitEvent('getAllPageElements', undefined, function(response) {
                     if (response.status == 200) {
-                        (successCallback || _.noop)(response.pageElements);
+                        (successCallback || _.noop)(response.pageElements, response.deletedElementIds);
                     } else {
                         (errorCallback || _.noop)(response.status, response.message);
                     }

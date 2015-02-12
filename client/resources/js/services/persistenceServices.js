@@ -47,7 +47,8 @@ angular.module('colledit.persistenceServices', [])
         function Persistence(registerEventHandlerDescriptors) {
             var connection = serverCommunicationService.getServerConnection();
             var localElementsToBePersistedIds = [],
-                localElementsToBeDeletedIds = [];
+                localElementsToBeDeletedIds = [],
+                deletedElementIds = [];
 
             var getWrappedEventHandlerDescriptor = function(eventHandlerDescriptorKey) {
                 var eventHandlerDescriptor = registerEventHandlerDescriptors[eventHandlerDescriptorKey];
@@ -67,20 +68,23 @@ angular.module('colledit.persistenceServices', [])
                 }
             };
 
-            var pageElementSavedEventHandler = function(serverResponse) {
-                logService.logDebug('Persistence: Saving element "' + serverResponse.pageElementId +
-                    '" of type ' + serverResponse.pageElementType + ' received from server');
+            var pageElementSavedEventHandler = function(pageElement) {
+                logService.logDebug('Persistence: Saving element "' + pageElement.pageElementId +
+                    '" of type ' + pageElement.pageElementType + ' received from server');
 
-                localStorageService.savePageElement(serverResponse);
+                localStorageService.savePageElement(pageElement);
 
-                executeWrappedEventHandlerDescriptor('pageElementSaved', serverResponse);
+                executeWrappedEventHandlerDescriptor('pageElementSaved', pageElement);
             };
 
-            var pageElementDeletedEventHandler = function(serverResponse) {
-                logService.logDebug('Persistence: Deleting element "' + serverResponse + '" received from server');
-                localStorageService.deletePageElement(serverResponse);
+            var pageElementDeletedEventHandler = function(pageElementId) {
+                logService.logDebug('Persistence: Deleting element "' + pageElementId + '" received from server');
+                localStorageService.deletePageElement(pageElementId);
+                if (deletedElementIds.indexOf(pageElementId) < 0) {
+                    deletedElementIds.push(pageElementId);
+                }
 
-                executeWrappedEventHandlerDescriptor('pageElementDeleted', serverResponse);
+                executeWrappedEventHandlerDescriptor('pageElementDeleted', pageElementId);
             };
 
             var allPageElementsDeletedEventHandler = function(serverResponse) {
@@ -95,7 +99,7 @@ angular.module('colledit.persistenceServices', [])
                 listPageElements(function(pageElements) {
                     executeWrappedEventHandlerDescriptor('allPageElementsListed', pageElements);
                 });
-            }
+            };
 
             connection.connectToServerEventsWithListeners(
                 {'pageElementSaved': pageElementSavedEventHandler,
@@ -132,23 +136,41 @@ angular.module('colledit.persistenceServices', [])
 
             var listPageElements = function(callback) {
                 if (connection.isConnected) {
-                    connection.listPageElements(function(serverPageElements) {
-                        logService.logDebug('Persistence: Listing all ' + serverPageElements.length +
-                            ' elements received from server');
+                    connection.listPageElements(function(serverPageElements, serverDeletedElementIds) {
                         if (angular.isArray(serverPageElements)) {
+                            logService.logDebug('Persistence: Listing all ' + serverPageElements.length +
+                                ' elements received from server');
                             _.forEach(serverPageElements, function(serverPageElement) {
                                 if (localElementsToBeDeletedIds.indexOf(serverPageElement.pageElementId) < 0) {
                                     localStorageService.savePageElement(serverPageElement);
                                 }
                             });
                         }
-                        //TODO When implemented in the server, get list of deleted elements ids from the server and schedule them for deletion, or remove them from localElementsToBePersistedIds
+                        if (angular.isArray(serverDeletedElementIds)) {
+                            logService.logDebug('Persistence: Handling all ' + serverDeletedElementIds.length +
+                                ' deletedElementIds received from server');
+                            //Send to server deleted elements not known from server yet
+                            _.chain(deletedElementIds)
+                                .difference(serverDeletedElementIds)
+                                .forEach(function (deletedElementId) {
+                                    if (localElementsToBeDeletedIds.indexOf(deletedElementId) < 0) {
+                                        localElementsToBeDeletedIds.push(deletedElementId);
+                                    }
+                                });
+                            //Get list of deleted elements ids from the server and delete them
+                            _.forEach(serverDeletedElementIds, function (deletedElementId) {
+                                var matchDeletedElementId = _.partial(doPageElementsIdsMatch, deletedElementId);
+                                _.remove(localElementsToBeDeletedIds, matchDeletedElementId);
+                                _.remove(localElementsToBePersistedIds, matchDeletedElementId);
+                                pageElementDeletedEventHandler(deletedElementId);
+                            });
+                        }
                         localStorageService.listAllPageElements(function(localPageElements) {
                             _.forEach(localPageElements, function(localPageElement) {
                                 var matchLocalElementId = _.partial(doPageElementsIdsMatch, localPageElement);
                                 if (!angular.isDefined(_.find(serverPageElements, matchLocalElementId))
                                     && localElementsToBePersistedIds.indexOf(localPageElement.pageElementId) < 0) {
-                                    //Determine here which elements are not known from the server yet, and schedule them for persistence
+                                    //Schedule for persistence elements not known from the server yet
                                     localElementsToBePersistedIds.push(localPageElement.pageElementId);
                                 }
                                 //TODO When versioning implemented, determine here which updated elements are not updated yet from the server yet and schedule them for persistence
