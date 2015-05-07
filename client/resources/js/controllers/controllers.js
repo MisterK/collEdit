@@ -51,12 +51,14 @@ angular.module('colledit.controllers', [])
         };
 
         $scope.selectPageElement = function(pageElement) {
+            var previouslySelectedElementType = clearPageElementSelection();
             $scope.selectedPageElement = pageElement;
             $scope.nextPageElementType = undefined;
             if ($scope.isTextualPageElement(pageElement)) {
                 $scope.textContentsInput = pageElement.contents;
             }
             displayModifyControlsDialog(pageElement);
+            return previouslySelectedElementType;
         };
 
         var clearPageElementSelection = function() {
@@ -72,7 +74,7 @@ angular.module('colledit.controllers', [])
             if (angular.isDefined(previouslySelectedElementType)) {
                 requirePageElementsRefresh(previouslySelectedElementType);
             }
-        }
+        };
 
         $scope.isPageElementSelectedId = function(pageElementId) {
             return angular.isDefined($scope.selectedPageElement)

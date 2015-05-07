@@ -12,97 +12,113 @@ angular.module('colledit.directives', [])
      */
     .directive('colleditPage', function(presentationCfg, dataCfg, d3Service,
                                         d3ComponentFactoryService, d3TransitionsService) {
+        var d3 = d3Service.d3;
+
+        var createRootSvgElement = function(rootElement) {
+            return d3.select(rootElement[0])
+                .append('svg')
+                .attr('class', 'colleditPageSvg')
+                .style('width', presentationCfg.pageWidth + 'px')
+                .style('height', presentationCfg.pageHeight + 'px');
+        };
+
+        var drawClickableBackground = function(svgRootElement, scope) {
+            svgRootElement
+                .append("g")
+                    .attr("id", "backgroundGroup")
+                .append('rect')
+                    .attr('class', 'clickableBackground')
+                    .attr('width', presentationCfg.pageWidth)
+                    .attr('height', presentationCfg.pageHeight)
+                    .on('click', function () {
+                        var container = this;
+                        scope.$apply(function () {
+                            scope.handleBackgroundClick(d3.mouse(container));
+                        });
+                    });
+        };
+
+        var drawPageElementsGroup = function(svgRootElement) {
+            return svgRootElement.append("g").attr("id", "pageElementsGroup");
+        };
+
+        var getPageElementCssSelection = function(pageElementSelection) {
+            var selectionByPageElementId = angular.isObject(pageElementSelection.pageElement)
+                ? pageElementSelection.pageElement.pageElementId : pageElementSelection.pageElementId;
+            if (angular.isString(selectionByPageElementId)) {
+                return "#" + selectionByPageElementId;
+            } else if (angular.isString(pageElementSelection.pageElementType)) {
+                return ".pageElement." + pageElementSelection.pageElementType;
+            } else {
+                return ".pageElement";
+            }
+        };
+
+        var drawPageElements = function(scope, pageElementsGroup, selection, data, pageElementType) {
+            var pageElements = pageElementsGroup.selectAll(selection).data(data);
+
+            d3TransitionsService.fadeIn(
+                d3ComponentFactoryService.appendPageElementBasedOnType(pageElementType,
+                    pageElements.enter())
+                    .attr('class', 'pageElement ' + pageElementType)
+                    .on('click', function(d) {
+                        scope.$apply(function() {
+                            var previouslySelectedElementType = scope.selectPageElement(d);
+                            if (angular.isDefined(previouslySelectedElementType)) {
+                                reDrawPageElements(scope, pageElementsGroup,
+                                    getPageElementCssSelection({pageElementType: previouslySelectedElementType}),
+                                    pageElementType);
+                            }
+                            reDrawPageElements(scope, pageElementsGroup, pageElements, pageElementType);
+                        });
+                    }),
+                presentationCfg.animations.pageElements);
+
+            reDrawPageElements(scope, pageElementsGroup, pageElements, pageElementType);
+        };
+
+        var reDrawPageElements = function(scope, pageElementsGroup, selection, pageElementType) {
+            var pageElements = angular.isString(selection) ? pageElementsGroup.selectAll(selection) : selection;
+
+            d3ComponentFactoryService.updatePageElementBasedOnType(pageElementType, pageElements)
+                .style('fill', function(pageElement) {
+                    return scope.isPageElementSelected(pageElement) ?
+                        presentationCfg.selectedPageElementColor : pageElement.fill });
+        };
+
+        var removePageElements = function(scope, pageElementsGroup, selection, data) {
+            var pageElements = angular.isString(selection) ? pageElementsGroup.selectAll(selection) : selection;
+
+            d3TransitionsService.fadeOutAndRemove(pageElements.data(data).exit(),
+                presentationCfg.animations.pageElements);
+        };
+
         return {
             restrict: 'E',
             template: '<div class="colleditPageDiv"></div>',
             replace: true,
             link: function(scope, element) {
-                var d3 = d3Service.d3;
-                var svg = d3.select(element[0])
-                    .append('svg')
-                        .attr('class', 'colleditPageSvg')
-                        .style('width', presentationCfg.pageWidth + 'px')
-                        .style('height', presentationCfg.pageHeight + 'px');
+                var svgRootElement = createRootSvgElement(element);
 
                 //Append SVG groups (warning: order is important)
-                var backgroundGroup = svg.append("g").attr("id", "backgroundGroup");
-                var pageElementsGroup = svg.append("g").attr("id", "pageElementsGroup");
-
-                //Draw clickable background
-                backgroundGroup
-                    .append('rect')
-                        .attr('class', 'clickableBackground')
-                        .attr('width', presentationCfg.pageWidth)
-                        .attr('height', presentationCfg.pageHeight)
-                        .on('click', function() {
-                            var container = this;
-                            scope.$apply(function() {
-                                scope.handleBackgroundClick(d3.mouse(container));
-                            });
-                        });
+                drawClickableBackground(svgRootElement, scope);
+                var pageElementsGroup = drawPageElementsGroup(svgRootElement);
 
                 //Draw page elements whenever needed, grouped by type
                 _.forEach(dataCfg.pageElementTypes, function(pageElementType) {
                     scope.$watchCollection('pageElements["' + pageElementType + '"]', function(newValue) {
-                        if (angular.isArray(newValue)) {
-                            drawPageElements(pageElementType);
+                        var selection = getPageElementCssSelection({pageElementType: pageElementType});
+                        if (angular.isArray(newValue) && newValue.length > 0) {
+                            drawPageElements(scope, pageElementsGroup, selection, newValue, pageElementType);
                         }
+                        removePageElements(scope, pageElementsGroup, selection, newValue);
                     });
                 });
 
-                //TODO replace this by deep collection watch
                 scope.$on('pageElementsRefresh', function(event, pageElementTypeToRefresh) {
-                    drawPageElements(pageElementTypeToRefresh);
+                    var selection = getPageElementCssSelection({pageElementType: pageElementTypeToRefresh});
+                    reDrawPageElements(scope, pageElementsGroup, selection, pageElementTypeToRefresh);
                 });
-
-                var drawPageElements = function(pageElementTypeToRefresh) {
-                    var pageElementTypesToRefresh = angular.isDefined(pageElementTypeToRefresh) ?
-                        [pageElementTypeToRefresh] : dataCfg.pageElementTypes;
-                    _.forEach(pageElementTypesToRefresh, function(pageElementType) {
-                        drawPageElementsOfType(pageElementType);
-                    });
-                };
-
-                var drawPageElementsOfType = function(pageElementType) {
-                    var pageElements = pageElementsGroup.selectAll(".pageElement." + pageElementType)
-                        .data(scope.pageElements[pageElementType]);
-
-                    d3TransitionsService.fadeIn(
-                        d3ComponentFactoryService.appendPageElementBasedOnType(pageElementType,
-                            pageElements.enter())
-                            .attr('class', 'pageElement ' + pageElementType)
-                            .on('click', function(d) {
-                                scope.$apply(function() {
-                                    scope.selectPageElement(d);
-                                    reDrawPageElements();
-                                });
-                            }),
-                        presentationCfg.animations.pageElements);
-
-                    reDrawPageElements(pageElementType, pageElements);
-
-                    d3TransitionsService.fadeOutAndRemove(pageElements.exit(),
-                        presentationCfg.animations.pageElements);
-                };
-
-                var reDrawPageElements = function(pageElementTypeToRefresh, pageElements) {
-                    var pageElementTypesToRefresh = angular.isDefined(pageElementTypeToRefresh) ?
-                        [pageElementTypeToRefresh] : dataCfg.pageElementTypes;
-                    _.forEach(pageElementTypesToRefresh, function(pageElementType) {
-                        reDrawPageElementsOfType(pageElementType, pageElements);
-                    });
-                };
-
-                var reDrawPageElementsOfType = function(pageElementType, pageElements) {
-                    if (!angular.isDefined(pageElements)) {
-                        pageElements = pageElementsGroup.selectAll(".pageElement." + pageElementType)
-                            .data(scope.pageElements[pageElementType]);
-                    }
-                    d3ComponentFactoryService.updatePageElementBasedOnType(pageElementType, pageElements)
-                        .style('fill', function(pageElement) {
-                            return scope.isPageElementSelected(pageElement) ?
-                                presentationCfg.selectedPageElementColor : pageElement.fill });
-                };
             }
         }
     });
