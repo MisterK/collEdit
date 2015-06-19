@@ -41,6 +41,8 @@ angular.module('colledit.d3AngularServices', [])
                 default :
                     resultingD3Element = appendPageElementOfUnknownType(d3Element);
             }
+            resultingD3Element
+                .attr('id', getter('pageElementId'));
             return thisService.updatePageElementBasedOnType(pageElementType, resultingD3Element);
         };
 

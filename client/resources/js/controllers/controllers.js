@@ -162,7 +162,11 @@ angular.module('colledit.controllers', [])
                     '" received from server');
                 var matchDeletedElementId = _.partial(doPageElementsIdsMatch, deletedPageElementId);
                 _.forOwn($scope.pageElements, function(pageElementsForType) {
-                    return _.remove(pageElementsForType, matchDeletedElementId).length == 0;
+                    var wasFound = _.remove(pageElementsForType, matchDeletedElementId).length > 0;
+                    if (wasFound) {
+                        requirePageElementDisplayRemoval(deletedPageElementId);
+                    }
+                    return !wasFound;
                 });
 
                 if ($scope.isPageElementSelectedId(deletedPageElementId)) {
@@ -175,6 +179,7 @@ angular.module('colledit.controllers', [])
             _($scope.pageElements).values().forEach(function(pageElementsByType) {
                 pageElementsByType.length = 0;
             });
+            requireAllPageElementsDisplayRemoval();
             clearPageElementSelection();
         };
         var allPageElementsListedEventHandler = function(pageElements) {
@@ -209,6 +214,14 @@ angular.module('colledit.controllers', [])
 
         var requirePageElementsRefresh = function(pageElementTypeToRefresh) {
             $scope.$broadcast('pageElementsRefresh', pageElementTypeToRefresh);
+        };
+
+        var requireAllPageElementsDisplayRemoval = function() {
+            requirePageElementDisplayRemoval();
+        };
+
+        var requirePageElementDisplayRemoval = function(deletedPageElementId) {
+            $scope.$broadcast('pageElementDeleted', deletedPageElementId);
         };
 
         var pageElementUpdated = function(pageElement) {

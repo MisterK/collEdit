@@ -46,7 +46,7 @@ angular.module('colledit.directives', [])
             var selectionByPageElementId = angular.isObject(pageElementSelection.pageElement)
                 ? pageElementSelection.pageElement.pageElementId : pageElementSelection.pageElementId;
             if (angular.isString(selectionByPageElementId)) {
-                return "#" + selectionByPageElementId;
+                return "[id='" + selectionByPageElementId + "']";
             } else if (angular.isString(pageElementSelection.pageElementType)) {
                 return ".pageElement." + pageElementSelection.pageElementType;
             } else {
@@ -55,7 +55,8 @@ angular.module('colledit.directives', [])
         };
 
         var drawPageElements = function(scope, pageElementsGroup, selection, data, pageElementType) {
-            var pageElements = pageElementsGroup.selectAll(selection).data(data);
+            var pageElements = pageElementsGroup.selectAll(selection)
+                .data(data, function(d) { return d.pageElementId; });
 
             d3TransitionsService.fadeIn(
                 d3ComponentFactoryService.appendPageElementBasedOnType(pageElementType,
@@ -86,10 +87,10 @@ angular.module('colledit.directives', [])
                         presentationCfg.selectedPageElementColor : pageElement.fill });
         };
 
-        var removePageElements = function(scope, pageElementsGroup, selection, data) {
+        var removePageElements = function(scope, pageElementsGroup, selection) {
             var pageElements = angular.isString(selection) ? pageElementsGroup.selectAll(selection) : selection;
 
-            d3TransitionsService.fadeOutAndRemove(pageElements.data(data).exit(),
+            d3TransitionsService.fadeOutAndRemove(pageElements.data([]).exit(),
                 presentationCfg.animations.pageElements);
         };
 
@@ -111,13 +112,17 @@ angular.module('colledit.directives', [])
                         if (angular.isArray(newValue) && newValue.length > 0) {
                             drawPageElements(scope, pageElementsGroup, selection, newValue, pageElementType);
                         }
-                        removePageElements(scope, pageElementsGroup, selection, newValue);
                     });
                 });
 
                 scope.$on('pageElementsRefresh', function(event, pageElementTypeToRefresh) {
                     var selection = getPageElementCssSelection({pageElementType: pageElementTypeToRefresh});
                     reDrawPageElements(scope, pageElementsGroup, selection, pageElementTypeToRefresh);
+                });
+
+                scope.$on('pageElementDeleted', function(event, pageElementId) {
+                    var cssSelection = getPageElementCssSelection({pageElementId: pageElementId});
+                    removePageElements(scope, pageElementsGroup, cssSelection);
                 });
             }
         }
