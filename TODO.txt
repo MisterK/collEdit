@@ -1,11 +1,28 @@
+FEATURES ROADMAP
+----------
 - Versioning by lastUpdateDate or ETAG
-- Use _.defaults() to simplify PageElement instantiation
-- child controller for text edition dialog
-- double-click for child edition
+- Group by page, to enable multiple pages or multiple instances of same page in same session
+- Drag & drop
 - More element types
     -> image
     -> non-SVG mode (HTML)
+- double-click for child edition
 - Keyboard shortcuts
+
+CODE IMPROVEMENTS
+----------
+- make modifyControlsDialog a directive
+    - child controller for text edition dialog
+    - Create framework for handling of specific operations (e.g. changeTextPageElementsContents)
+- Handle toggleSize specifics inside dataServices.js, instead of controllers.js
+- Clear deletedElementIds on allPageElementsDeletedEventHandler() in persistenceService
+- Use _.defaults() to simplify PageElement instantiation
+- Use http://davidwalsh.name/javascript-objects-deconstruction to simplify inheritance mess
+
+BUGS
+----------
+- Fix D3 functions by type to remove grouping by type in scope
+    - use even more specific D3 CSS selector (for single elem adding, try to append [pageElem] to selection by id)
 
 DONE
 ---------
@@ -32,9 +49,5 @@ DONE
 - Call callback on socketio connect/reconnect, so that relist elements from server (as part of client-side reconciliation on server connect/reconnect)
 - Fix PageElement prototype inheritance
 - Maintain list of deletedElementIds, on both client and server sides
-
-BUGS
-----------
-- Use deep collection watch instead of events
-- Fix D3 functions by type to remove grouping by type in scope
 - Use specific D3 CSS selector to only refresh what's needed
+- Use events instead of deep collection watch

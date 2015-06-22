@@ -64,22 +64,19 @@ angular.module('colledit.directives', [])
                     .attr('class', 'pageElement ' + pageElementType)
                     .on('click', function(d) {
                         scope.$apply(function() {
-                            var previouslySelectedElementType = scope.selectPageElement(d);
-                            if (angular.isDefined(previouslySelectedElementType)) {
-                                reDrawPageElements(scope, pageElementsGroup,
-                                    getPageElementCssSelection({pageElementType: previouslySelectedElementType}),
-                                    pageElementType);
-                            }
-                            reDrawPageElements(scope, pageElementsGroup, pageElements, pageElementType);
+                            scope.selectPageElementAndRefresh(d);
                         });
                     }),
                 presentationCfg.animations.pageElements);
 
-            reDrawPageElements(scope, pageElementsGroup, pageElements, pageElementType);
+            reDrawPageElements(scope, pageElementsGroup, pageElements, undefined, pageElementType);
         };
 
-        var reDrawPageElements = function(scope, pageElementsGroup, selection, pageElementType) {
+        var reDrawPageElements = function(scope, pageElementsGroup, selection, data, pageElementType) {
             var pageElements = angular.isString(selection) ? pageElementsGroup.selectAll(selection) : selection;
+            if (angular.isArray(data)) {
+                pageElements = pageElements.data(data, function(d) { return d.pageElementId; });
+            }
 
             d3ComponentFactoryService.updatePageElementBasedOnType(pageElementType, pageElements)
                 .style('fill', function(pageElement) {
@@ -105,19 +102,22 @@ angular.module('colledit.directives', [])
                 drawClickableBackground(svgRootElement, scope);
                 var pageElementsGroup = drawPageElementsGroup(svgRootElement);
 
-                //Draw page elements whenever needed, grouped by type
-                _.forEach(dataCfg.pageElementTypes, function(pageElementType) {
-                    scope.$watchCollection('pageElements["' + pageElementType + '"]', function(newValue) {
-                        var selection = getPageElementCssSelection({pageElementType: pageElementType});
-                        if (angular.isArray(newValue) && newValue.length > 0) {
-                            drawPageElements(scope, pageElementsGroup, selection, newValue, pageElementType);
-                        }
+                scope.$on('pageElementAdded', function(event, pageElement) {
+                    var pageElementTypes = dataCfg.pageElementTypes;
+                    if (angular.isObject(pageElement)) {
+                        pageElementTypes = [pageElement.pageElementType];
+                    }
+                    _.forEach(pageElementTypes, function(pageElementType) {
+                        var cssSelection = getPageElementCssSelection({pageElementType: pageElementType});
+                        drawPageElements(scope, pageElementsGroup, cssSelection,
+                            scope.pageElements[pageElementType], pageElementType);
                     });
                 });
 
-                scope.$on('pageElementsRefresh', function(event, pageElementTypeToRefresh) {
-                    var selection = getPageElementCssSelection({pageElementType: pageElementTypeToRefresh});
-                    reDrawPageElements(scope, pageElementsGroup, selection, pageElementTypeToRefresh);
+                scope.$on('pageElementRefresh', function(event, pageElement) {
+                    var cssSelection = getPageElementCssSelection({pageElement: pageElement});
+                    reDrawPageElements(scope, pageElementsGroup, cssSelection,
+                        [pageElement], pageElement.pageElementType);
                 });
 
                 scope.$on('pageElementDeleted', function(event, pageElementId) {

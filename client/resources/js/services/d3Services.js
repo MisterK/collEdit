@@ -115,7 +115,7 @@ angular.module('colledit.d3AngularServices', [])
                 .append('unknown');
         };
     })
-    /* Service to build and append D3 elements */
+    /* Service to animate the adding and removing of D3 elements */
     .service('d3TransitionsService', function(presentationCfg) {
         this.fadeIn = function(d3Element, animate, delayFn) {
             if (!angular.isDefined(delayFn)) {

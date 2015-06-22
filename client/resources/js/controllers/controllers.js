@@ -37,7 +37,7 @@ angular.module('colledit.controllers', [])
             if (angular.isDefined(newPageElement)) {
                 logService.logDebug('Created element "' + newPageElement.pageElementId +
                     '" of type ' + newPageElement.pageElementType);
-                $scope.selectPageElement(newPageElement);
+                selectPageElement(newPageElement);
                 persistPageElement(newPageElement);
             }
         };
@@ -50,29 +50,33 @@ angular.module('colledit.controllers', [])
             }
         };
 
-        $scope.selectPageElement = function(pageElement) {
-            var previouslySelectedElementType = clearPageElementSelection();
+        var selectPageElement = function(pageElement) {
+            clearPageElementSelectionAndRefresh();
             $scope.selectedPageElement = pageElement;
             $scope.nextPageElementType = undefined;
             if ($scope.isTextualPageElement(pageElement)) {
                 $scope.textContentsInput = pageElement.contents;
             }
             displayModifyControlsDialog(pageElement);
-            return previouslySelectedElementType;
+        };
+
+        $scope.selectPageElementAndRefresh = function(pageElement) {
+            selectPageElement(pageElement);
+            requirePageElementDisplayRefresh(pageElement);
         };
 
         var clearPageElementSelection = function() {
-            var previouslySelectedElementType = angular.isDefined($scope.selectedPageElement) ?
-                $scope.selectedPageElement.pageElementType : undefined;
+            var previouslySelectedElement = angular.isObject($scope.selectedPageElement) ?
+                $scope.selectedPageElement : undefined;
             $scope.selectedPageElement = undefined;
             $scope.textContentsInput = '';
-            return previouslySelectedElementType;
+            return previouslySelectedElement;
         };
 
         var clearPageElementSelectionAndRefresh = function() {
-            var previouslySelectedElementType = clearPageElementSelection();
-            if (angular.isDefined(previouslySelectedElementType)) {
-                requirePageElementsRefresh(previouslySelectedElementType);
+            var previouslySelectedElement = clearPageElementSelection();
+            if (angular.isObject(previouslySelectedElement)) {
+                requirePageElementDisplayRefresh(previouslySelectedElement);
             }
         };
 
@@ -138,7 +142,7 @@ angular.module('colledit.controllers', [])
         };
 
         //Setup persistence
-        var pageElementSavedEventHandler = function(savedPageElement) {
+        var pageElementSavedEventHandler = function(savedPageElement, requireDisplayRefresh) {
             pageElementsFactory.augmentPageElement(savedPageElement);
             var matchSavedElementId = _.partial(doPageElementsIdsMatch, savedPageElement);
             var indexOfSavedPageElement = _.findIndex($scope.pageElements[savedPageElement.pageElementType],
@@ -147,12 +151,18 @@ angular.module('colledit.controllers', [])
                 logService.logDebug('Adding element "' + savedPageElement.pageElementId +
                     '" of type ' + savedPageElement.pageElementType + ' received from server');
                 $scope.pageElements[savedPageElement.pageElementType].push(savedPageElement);
+                if (requireDisplayRefresh !== false) {
+                    requirePageElementDisplayAdding(savedPageElement);
+                }
             } else {
                 logService.logDebug('Updating element "' + savedPageElement.pageElementId +
                     '" of type ' + savedPageElement.pageElementType + ' received from server');
                 $scope.pageElements[savedPageElement.pageElementType][indexOfSavedPageElement] = savedPageElement;
                 if ($scope.isPageElementSelected(savedPageElement)) {
-                    $scope.selectPageElement(savedPageElement); //Re-select it to update edit dialog
+                    selectPageElement(savedPageElement); //Re-select it to update edit dialog
+                }
+                if (requireDisplayRefresh !== false) {
+                    requirePageElementDisplayRefresh(savedPageElement);
                 }
             }
         };
@@ -190,8 +200,9 @@ angular.module('colledit.controllers', [])
              logService.logDebug('Listing all ' + pageElements.length +
                 ' elements received from server or local storage');
              _(pageElements).forEach(function(pageElement) {
-                 pageElementSavedEventHandler(pageElement);
+                 pageElementSavedEventHandler(pageElement, false);
              });
+            requireAllPageElementsDisplayAdding();
          };
         var augmentWithScopeApplyWrapper = function(eventHandlerCallback) {
           eventHandlerCallback.scopeApplyWrapper = function() {
@@ -212,8 +223,16 @@ angular.module('colledit.controllers', [])
             persistence.savePageElement(pageElement);
         };
 
-        var requirePageElementsRefresh = function(pageElementTypeToRefresh) {
-            $scope.$broadcast('pageElementsRefresh', pageElementTypeToRefresh);
+        var requirePageElementDisplayAdding = function(pageElementToAdd) {
+            $scope.$broadcast('pageElementAdded', pageElementToAdd);
+        };
+
+        var requireAllPageElementsDisplayAdding = function() {
+            requirePageElementDisplayAdding();
+        };
+
+        var requirePageElementDisplayRefresh = function(pageElementToRefresh) {
+            $scope.$broadcast('pageElementRefresh', pageElementToRefresh);
         };
 
         var requireAllPageElementsDisplayRemoval = function() {
@@ -226,6 +245,6 @@ angular.module('colledit.controllers', [])
 
         var pageElementUpdated = function(pageElement) {
             persistPageElement(pageElement);
-            requirePageElementsRefresh(pageElement.pageElementType);
+            requirePageElementDisplayRefresh(pageElement);
         };
     });

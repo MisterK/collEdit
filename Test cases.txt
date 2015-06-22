@@ -1,0 +1,22 @@
+-- Initial list from server
+    * Add elements from local storage
+    * Add elements added in server
+    * Delete elements from local storage deleted in server
+    * Update elements from local storage updated in server
+    * All elements selectable, update-able and deletable
+-- Add
+-- Update
+-- Delete
+-- Nuke
+-- Selection
+    * New added element is automatically selected
+    * Clear selection on click background
+    * Clear selection on select new element type for adding
+    * Clear selection on deletion of selected element
+    * Clear selection on selection another element
+    * Select own created element
+    * Select element created by other
+    * Select element from local storage
+    * Select element from initial list
+    * Select updated element
+    * Select element updated by other
