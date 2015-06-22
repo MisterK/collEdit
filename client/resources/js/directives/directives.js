@@ -59,17 +59,14 @@ angular.module('colledit.directives', [])
                 .data(data, function(d) { return d.pageElementId; });
 
             d3TransitionsService.fadeIn(
-                d3ComponentFactoryService.appendPageElementBasedOnType(pageElementType,
-                    pageElements.enter())
-                    .attr('class', 'pageElement ' + pageElementType)
+                d3ComponentFactoryService.appendPageElementBasedOnType(
+                        pageElementType, pageElements.enter(), scope.isPageElementSelected)
                     .on('click', function(d) {
                         scope.$apply(function() {
                             scope.selectPageElementAndRefresh(d);
                         });
                     }),
                 presentationCfg.animations.pageElements);
-
-            reDrawPageElements(scope, pageElementsGroup, pageElements, undefined, pageElementType);
         };
 
         var reDrawPageElements = function(scope, pageElementsGroup, selection, data, pageElementType) {
@@ -78,10 +75,8 @@ angular.module('colledit.directives', [])
                 pageElements = pageElements.data(data, function(d) { return d.pageElementId; });
             }
 
-            d3ComponentFactoryService.updatePageElementBasedOnType(pageElementType, pageElements)
-                .style('fill', function(pageElement) {
-                    return scope.isPageElementSelected(pageElement) ?
-                        presentationCfg.selectedPageElementColor : pageElement.fill });
+            d3ComponentFactoryService.updatePageElementBasedOnType(
+                pageElementType, pageElements, scope.isPageElementSelected);
         };
 
         var removePageElements = function(scope, pageElementsGroup, selection) {

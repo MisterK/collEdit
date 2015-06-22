@@ -24,9 +24,9 @@ angular.module('colledit.d3AngularServices', [])
         return {d3: $window.d3};
     })
     /* Service to build and append D3 elements */
-    .service('d3ComponentFactoryService', function() {
+    .service('d3ComponentFactoryService', function(presentationCfg) {
         var thisService = this;
-        this.appendPageElementBasedOnType = function(pageElementType, d3Element) {
+        this.appendPageElementBasedOnType = function(pageElementType, d3Element, isSelectedCallback) {
             var resultingD3Element;
             switch (pageElementType) {
                 case 'svgText':
@@ -42,11 +42,12 @@ angular.module('colledit.d3AngularServices', [])
                     resultingD3Element = appendPageElementOfUnknownType(d3Element);
             }
             resultingD3Element
-                .attr('id', getter('pageElementId'));
-            return thisService.updatePageElementBasedOnType(pageElementType, resultingD3Element);
+                .attr('id', getter('pageElementId'))
+                .attr('class', 'pageElement ' + pageElementType);
+            return thisService.updatePageElementBasedOnType(pageElementType, resultingD3Element, isSelectedCallback);
         };
 
-        this.updatePageElementBasedOnType = function(pageElementType, d3Element) {
+        this.updatePageElementBasedOnType = function(pageElementType, d3Element, isSelectedCallback) {
             var resultingD3Element;
             switch (pageElementType) {
                 case 'svgText':
@@ -61,7 +62,9 @@ angular.module('colledit.d3AngularServices', [])
                 default :
                     return d3Element;
             }
-            return resultingD3Element;
+            return resultingD3Element.style('fill', function(pageElement) {
+                return isSelectedCallback(pageElement) ? presentationCfg.selectedPageElementColor : pageElement.fill;
+            });
         };
 
         var getter = function(propertyName) {

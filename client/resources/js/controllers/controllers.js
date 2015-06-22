@@ -80,13 +80,13 @@ angular.module('colledit.controllers', [])
             }
         };
 
-        $scope.isPageElementSelectedId = function(pageElementId) {
+        var isPageElementSelectedId = function(pageElementId) {
             return angular.isDefined($scope.selectedPageElement)
                 && doPageElementsIdsMatch(pageElementId, $scope.selectedPageElement);
         };
 
         $scope.isPageElementSelected = function(pageElement) {
-            return $scope.isPageElementSelectedId(pageElement.pageElementId);
+            return isPageElementSelectedId(pageElement.pageElementId);
         };
 
         $scope.isTextualPageElement = function(pageElement) {
@@ -179,7 +179,7 @@ angular.module('colledit.controllers', [])
                     return !wasFound;
                 });
 
-                if ($scope.isPageElementSelectedId(deletedPageElementId)) {
+                if (isPageElementSelectedId(deletedPageElementId)) {
                    clearPageElementSelection();
                 }
             }
