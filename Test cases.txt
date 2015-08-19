@@ -5,9 +5,24 @@
     * Update elements from local storage updated in server
     * All elements selectable, update-able and deletable
 -- Add
+    * Add of each type
 -- Update
+    * Update of each type
+    * Update while deselected on U2
+    * Update while selected on U2
+    * Update element from local storage
+    * Update element from initial list from server
 -- Delete
+    * Delete of each type
+    * Delete while deselected on U2
+    * Delete while selected on U2
+    * Delete element from local storage
+    * Delete element from initial list from server
 -- Nuke
+    * Nuke
+    * Nuke while selected on U2
+    * Nuke elements from local storage
+    * Nuke elements from initial list from server
 -- Selection
     * New added element is automatically selected
     * Clear selection on click background
@@ -20,3 +35,19 @@
     * Select element from initial list
     * Select updated element
     * Select element updated by other
+-- Disconnection scenarios
+    * Add while disconnected
+    * Update while disconnected
+    * Delete while disconnected
+    * Nuke while disconnected
+    * Reconcile after add during disconnection
+    * Reconcile after update during disconnection
+    * Reconcile after delete during disconnection
+    * Reconcile after nuke during disconnection
+    * Reconcile after add during disconnection and page refresh
+    * Reconcile after update during disconnection and page refresh
+    * Reconcile after delete during disconnection and page refresh
+    * Reconcile after nuke during disconnection and page refresh
+    * Concurrent update while disconnected
+    * Concurrent delete while disconnected
+    * Concurrent nuke while disconnected

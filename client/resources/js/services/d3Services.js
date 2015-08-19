@@ -26,44 +26,44 @@ angular.module('colledit.d3AngularServices', [])
     /* Service to build and append D3 elements */
     .service('d3ComponentFactoryService', function(presentationCfg) {
         var thisService = this;
-        this.appendPageElementBasedOnType = function(pageElementType, d3Element, isSelectedCallback) {
-            var resultingD3Element;
-            switch (pageElementType) {
-                case 'svgText':
-                    resultingD3Element = appendSVGTextPageElement(d3Element);
-                    break;
-                case 'svgCircle':
-                    resultingD3Element = appendSVGCirclePageElement(d3Element);
-                      break;
-                case 'svgRect':
-                    resultingD3Element = appendSVGRectanglePageElement(d3Element);
-                      break;
-                default :
-                    resultingD3Element = appendPageElementOfUnknownType(d3Element);
-            }
-            resultingD3Element
-                .attr('id', getter('pageElementId'))
-                .attr('class', 'pageElement ' + pageElementType);
-            return thisService.updatePageElementBasedOnType(pageElementType, resultingD3Element, isSelectedCallback);
+        var elementTypeToTagNameMapping = {
+            'svgText': 'text',
+            'svgCircle': 'circle',
+            'svgRect': 'rect'
         };
 
-        this.updatePageElementBasedOnType = function(pageElementType, d3Element, isSelectedCallback) {
-            var resultingD3Element;
-            switch (pageElementType) {
-                case 'svgText':
-                    resultingD3Element = updateSVGTextPageElement(d3Element);
-                    break;
-                case 'svgCircle':
-                    resultingD3Element = updateSVGCirclePageElement(d3Element);
-                    break;
-                case 'svgRect':
-                    resultingD3Element = updateSVGRectanglePageElement(d3Element);
-                    break;
-                default :
-                    return d3Element;
-            }
-            return resultingD3Element.style('fill', function(pageElement) {
-                return isSelectedCallback(pageElement) ? presentationCfg.selectedPageElementColor : pageElement.fill;
+        this.appendPageElementBasedOnType = function(d3Element, isSelectedCallback) {
+            var resultingD3Element = d3Element
+                .append(function(pageElement) {
+                    var tagName = elementTypeToTagNameMapping[pageElement.pageElementType] || 'unknown';
+                    return document.createElementNS('http://www.w3.org/2000/svg', tagName);
+                })
+                .attr('id', getter('pageElementId'))
+                .attr('class', function(pageElement) {
+                    return 'pageElement ' + pageElement.pageElementType;
+                });
+            return thisService.updatePageElementBasedOnType(resultingD3Element, isSelectedCallback);
+        };
+
+        this.updatePageElementBasedOnType = function(d3Element, isSelectedCallback) {
+            return d3Element.each(function(pageElement) {
+                var thisElement = d3.select(this);
+                switch (pageElement.pageElementType) {
+                    case 'svgText':
+                        thisElement = updateSVGTextPageElement(thisElement);
+                        break;
+                    case 'svgCircle':
+                        thisElement = updateSVGCirclePageElement(thisElement);
+                        break;
+                    case 'svgRect':
+                        thisElement = updateSVGRectanglePageElement(thisElement);
+                        break;
+                    default :
+                        return d3Element;
+                }
+                return thisElement.style('fill', function(pageElement) {
+                    return isSelectedCallback(pageElement) ? presentationCfg.selectedPageElementColor : pageElement.fill;
+                });
             });
         };
 
@@ -71,26 +71,16 @@ angular.module('colledit.d3AngularServices', [])
             return function(pageElement) { return pageElement[propertyName]; }
         };
 
-        var appendSVGTextPageElement = function(d3Element) {
-            return d3Element
-                .append('text')
-                .style('text-anchor', 'middle');
-        };
-
         var updateSVGTextPageElement = function(d3Element) {
             return d3Element
                 .attr('x', getter('x'))
                 .attr('y', getter('y'))
                 .text(getter('contents'))
+                .style('text-anchor', 'middle')
                 .style('font-size', getter('fontSize'))
                 .style('font-style', getter('fontStyle'))
                 .style('font-weight', getter('fontWeight'))
                 .style('text-decoration', getter('textDecoration'));
-        };
-
-        var appendSVGCirclePageElement = function(d3Element) {
-            return d3Element
-                .append('circle');
         };
 
         var updateSVGCirclePageElement = function(d3Element) {
@@ -100,22 +90,12 @@ angular.module('colledit.d3AngularServices', [])
                 .attr('r', getter('radius'));
         };
 
-        var appendSVGRectanglePageElement = function(d3Element) {
-            return d3Element
-                .append('rect');
-        };
-
         var updateSVGRectanglePageElement = function(d3Element) {
             return d3Element
                 .attr('x', getter('x'))
                 .attr('y', getter('y'))
                 .attr('width', getter('width'))
                 .attr('height', getter('height'));
-        };
-
-        var appendPageElementOfUnknownType = function(d3Element) {
-            return d3Element
-                .append('unknown');
         };
     })
     /* Service to animate the adding and removing of D3 elements */

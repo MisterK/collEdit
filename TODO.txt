@@ -16,13 +16,12 @@ CODE IMPROVEMENTS
     - Create framework for handling of specific operations (e.g. changeTextPageElementsContents)
 - Handle toggleSize specifics inside dataServices.js, instead of controllers.js
 - Clear deletedElementIds on allPageElementsDeletedEventHandler() in persistenceService
+- Persist deletedElementIds in local storage
 - Use _.defaults() to simplify PageElement instantiation
 - Use http://davidwalsh.name/javascript-objects-deconstruction to simplify inheritance mess
 
 BUGS
 ----------
-- Fix D3 functions by type to remove grouping by type in scope
-    - use even more specific D3 CSS selector (for single elem adding, try to append [pageElem] to selection by id)
 
 DONE
 ---------
@@ -51,3 +50,4 @@ DONE
 - Maintain list of deletedElementIds, on both client and server sides
 - Use specific D3 CSS selector to only refresh what's needed
 - Use events instead of deep collection watch
+- Fix D3 functions by type to remove grouping by type in scope

@@ -54,13 +54,16 @@ angular.module('colledit.directives', [])
             }
         };
 
-        var drawPageElements = function(scope, pageElementsGroup, selection, data, pageElementType) {
-            var pageElements = pageElementsGroup.selectAll(selection)
-                .data(data, function(d) { return d.pageElementId; });
+        function selectPageElements(pageElementsGroup, cssSelection, data) {
+            return pageElementsGroup.selectAll(cssSelection)
+                .data(data, function (d) { return d.pageElementId; });
+        }
+
+        var drawPageElements = function(scope, pageElementsGroup, cssSelection, data) {
+            var pageElements = selectPageElements(pageElementsGroup, cssSelection, data).enter();
 
             d3TransitionsService.fadeIn(
-                d3ComponentFactoryService.appendPageElementBasedOnType(
-                        pageElementType, pageElements.enter(), scope.isPageElementSelected)
+                d3ComponentFactoryService.appendPageElementBasedOnType(pageElements, scope.isPageElementSelected)
                     .on('click', function(d) {
                         scope.$apply(function() {
                             scope.selectPageElementAndRefresh(d);
@@ -69,21 +72,16 @@ angular.module('colledit.directives', [])
                 presentationCfg.animations.pageElements);
         };
 
-        var reDrawPageElements = function(scope, pageElementsGroup, selection, data, pageElementType) {
-            var pageElements = angular.isString(selection) ? pageElementsGroup.selectAll(selection) : selection;
-            if (angular.isArray(data)) {
-                pageElements = pageElements.data(data, function(d) { return d.pageElementId; });
-            }
+        var reDrawPageElements = function(scope, pageElementsGroup, cssSelection, data) {
+            var pageElements = selectPageElements(pageElementsGroup, cssSelection, data);
 
-            d3ComponentFactoryService.updatePageElementBasedOnType(
-                pageElementType, pageElements, scope.isPageElementSelected);
+            d3ComponentFactoryService.updatePageElementBasedOnType(pageElements, scope.isPageElementSelected);
         };
 
-        var removePageElements = function(scope, pageElementsGroup, selection) {
-            var pageElements = angular.isString(selection) ? pageElementsGroup.selectAll(selection) : selection;
+        var removePageElements = function(scope, pageElementsGroup, cssSelection) {
+            var pageElements = selectPageElements(pageElementsGroup, cssSelection, []).exit();
 
-            d3TransitionsService.fadeOutAndRemove(pageElements.data([]).exit(),
-                presentationCfg.animations.pageElements);
+            d3TransitionsService.fadeOutAndRemove(pageElements, presentationCfg.animations.pageElements);
         };
 
         return {
@@ -98,21 +96,15 @@ angular.module('colledit.directives', [])
                 var pageElementsGroup = drawPageElementsGroup(svgRootElement);
 
                 scope.$on('pageElementAdded', function(event, pageElement) {
-                    var pageElementTypes = dataCfg.pageElementTypes;
-                    if (angular.isObject(pageElement)) {
-                        pageElementTypes = [pageElement.pageElementType];
-                    }
-                    _.forEach(pageElementTypes, function(pageElementType) {
-                        var cssSelection = getPageElementCssSelection({pageElementType: pageElementType});
-                        drawPageElements(scope, pageElementsGroup, cssSelection,
-                            scope.pageElements[pageElementType], pageElementType);
-                    });
+                    var cssSelection = getPageElementCssSelection({pageElement: pageElement});
+                    var data = angular.isObject(pageElement) ? [pageElement] : scope.pageElements;
+                    drawPageElements(scope, pageElementsGroup, cssSelection, data);
                 });
 
                 scope.$on('pageElementRefresh', function(event, pageElement) {
                     var cssSelection = getPageElementCssSelection({pageElement: pageElement});
-                    reDrawPageElements(scope, pageElementsGroup, cssSelection,
-                        [pageElement], pageElement.pageElementType);
+                    var data = angular.isObject(pageElement) ? [pageElement] : scope.pageElements;
+                    reDrawPageElements(scope, pageElementsGroup, cssSelection, data);
                 });
 
                 scope.$on('pageElementDeleted', function(event, pageElementId) {
