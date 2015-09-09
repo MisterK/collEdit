@@ -5,39 +5,30 @@
 angular.module('colledit.controllers', [])
     .controller('CollEditController', function($scope, pageElementsFactory, persistenceService, logService,
                                                doPageElementsIdsMatch) {
-        $scope.nextPageElementType = undefined;
         $scope.pageElements = [];
         $scope.selectedPageElement = undefined;
-        $scope.pageElementProperties = {};
+        $scope.addDialogCoordinates = undefined;
 
-        $scope.setNextPageElementType = function(nextPageElementType) {
-            $scope.nextPageElementType = nextPageElementType;
-            clearPageElementSelectionAndRefresh();
+        var hideAddDialog = function() {
+            $scope.addDialogCoordinates = undefined;
         };
 
-        $scope.handleBackgroundClick = function(clickCoordinates) {
-            if (!angular.isDefined($scope.nextPageElementType)
-                || !angular.isArray(clickCoordinates)
-                || clickCoordinates.length < 2) {
-                clearPageElementSelectionAndRefresh();
-                return;
+        $scope.handleBackgroundClick = function() {
+            clearPageElementSelectionAndRefresh();
+            hideAddDialog();
+        };
+
+        $scope.handleBackgroundDoubleClick = function(clickCoordinates) {
+            if (angular.isArray(clickCoordinates) && clickCoordinates.length >= 2) {
+                $scope.addDialogCoordinates = clickCoordinates;
             }
-            var newPageElement = pageElementsFactory.createPageElement(
-                    $scope.nextPageElementType,
-                    clickCoordinates,
-                    $scope.pageElementProperties);
-            if (angular.isDefined(newPageElement)) {
-                logService.logDebug('Created element "' + newPageElement.pageElementId +
-                    '" of type ' + newPageElement.pageElementType);
-                selectPageElement(newPageElement);
-                persistPageElement(newPageElement);
-            }
+            clearPageElementSelectionAndRefresh();
         };
 
         var selectPageElement = function(pageElement) {
             clearPageElementSelectionAndRefresh();
             $scope.selectedPageElement = pageElement;
-            $scope.nextPageElementType = undefined;
+            hideAddDialog();
         };
 
         $scope.selectPageElementAndRefresh = function(pageElement) {
@@ -68,6 +59,17 @@ angular.module('colledit.controllers', [])
             return isPageElementSelectedId(pageElement.pageElementId);
         };
 
+        $scope.addPageElement = function(pageElementType, clickCoordinates, pageElementProperties) {
+            var newPageElement = pageElementsFactory.createPageElement(
+                pageElementType, clickCoordinates, pageElementProperties || {});
+            if (angular.isDefined(newPageElement)) {
+                logService.logDebug('Created element "' + newPageElement.pageElementId +
+                    '" of type ' + newPageElement.pageElementType);
+                persistPageElement(newPageElement);
+                selectPageElement(newPageElement);
+            }
+        };
+
         $scope.updatePageElement = function(pageElement) {
             if (angular.isDefined(pageElement)) {
                 persistPageElement(pageElement);
@@ -82,8 +84,8 @@ angular.module('colledit.controllers', [])
         };
 
         $scope.deleteAllPageElements = function() {
-            logService.logDebug('Deleting all elements');
             persistence.deleteAllPageElements();
+            hideAddDialog();
         };
 
         //Setup persistence

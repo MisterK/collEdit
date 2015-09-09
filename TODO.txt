@@ -11,8 +11,6 @@ FEATURES ROADMAP
 
 CODE IMPROVEMENTS
 ----------
-- Use directive for addControls dialog & potentially make it floating (appear on double-click on background?)
-- Do not persist non-dynamic pageElement properties on server (have to re-set them on augmentPageElement)
 - Clear deletedElementIds on allPageElementsDeletedEventHandler() in persistenceService
 - Persist deletedElementIds in local storage
 - Use _.defaults() to simplify PageElement instantiation
@@ -21,6 +19,7 @@ CODE IMPROVEMENTS
 
 BUGS
 ----------
+- Do not persist non-dynamic pageElement properties on server (have to re-set them on augmentPageElement)
 
 DONE
 ---------
@@ -53,3 +52,21 @@ DONE
 - make modifyControlsDialog a directive
     - Create framework for updating vs. toggling properties
 - Handle toggleSize specifics inside dataServices.js, instead of controllers.js (aliasedProperties)
+- Use directive for addControls dialog & potentially make it floating (appear on double-click on background?)
+
+NOTES
+---------
+- Text deselection on double click, if text selection has to be re-enabled:
+    - Remove user-select CSS class
+    - Add call to this function in .on('dblclick', function() { ... }):
+        var clearSelection = function() {
+            if (document.selection && document.selection.empty) {
+                document.selection.empty();
+            } else if (window.getSelection) {
+                window.getSelection().removeAllRanges();
+            }
+        };
+- To box dialogs inside div:
+    var boundDecrementedValue = function(value, increment, min, max) {
+        return Math.max(min, Math.min(value - increment, max - 2 * increment));
+    };

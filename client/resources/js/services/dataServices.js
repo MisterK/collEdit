@@ -29,7 +29,7 @@ angular.module('colledit.dataAngularServices', [])
         pageElementTypes: ['svgText', 'svgCircle', 'svgRect'],
         togglePropertyValue: '__TOGGLE__'
     })
-    .constant('doPageElementsIdsMatch', function (pageElementOrId1, pageElementOrId2) {
+    .constant('doPageElementsIdsMatch', function(pageElementOrId1, pageElementOrId2) {
         var pageElementId1 = angular.isObject(pageElementOrId1) ? pageElementOrId1.pageElementId : pageElementOrId1;
         var pageElementId2 = angular.isObject(pageElementOrId2) ? pageElementOrId2.pageElementId : pageElementOrId2;
         return pageElementId1 === pageElementId2;
@@ -57,7 +57,6 @@ angular.module('colledit.dataAngularServices', [])
                 case 'svgRect':
                     _.mixin(pageElement, new RectanglePageElement);
                     break;
-
             }
         };
 
@@ -66,8 +65,8 @@ angular.module('colledit.dataAngularServices', [])
             return array[currentIndex < array.length -1 ? currentIndex + 1 : 0];
         };
 
-        var uuid = function () {
-            var s4 = function () {
+        var uuid = function() {
+            var s4 = function() {
                 return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
             };
             return (s4()+s4()+"-"+s4()+"-"+s4()+"-"+s4()+"-"+s4()+s4()+s4());

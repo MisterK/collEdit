@@ -1,5 +1,4 @@
 .colleditPageDiv {
-    float: left;
 }
 
 .colleditPageSvg {
@@ -12,8 +11,41 @@
     stroke-width: 1;
 }
 
+.addElementHelpNotice {
+    color: grey;
+    font-style: italic;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
 .pageElement {
 
+}
+
+.pageElement:hover {
+    cursor: pointer;
+}
+
+.pageElement.svgText {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Add PageElement Dialog*/
+
+.addControlsDialog {
+    position: absolute;
+    z-index: 1500;
+    border: 1px solid black;
+    background-color: white;
+    text-align: center;
+    padding: 5px 3px;
 }
 
 .elementTypeToAdd {
@@ -26,20 +58,21 @@
     cursor: pointer;
 }
 
-.elementTypeToAddSelected {
-    color: red;
-}
-
-.controls {
-    float: left;
-    margin-left: 5px;
-    text-align: center;
-}
-
 .addControls {
 }
 
-.modifyControls {
+.deleteControls {
+}
+
+/* Update PageElement Dialog*/
+
+.modifyControlsDialog {
+    position: absolute;
+    z-index: 1000;
+    border: 1px solid black;
+    background-color: white;
+    text-align: center;
+    padding: 3px;
 }
 
 .updateControls {
@@ -49,16 +82,8 @@
 
 }
 
-.deleteControls {
-}
+.textualUpdateControls {
 
-.modifyControlsDialog {
-    position: absolute;
-    z-index: 1000;
-    border: 1px solid black;
-    background-color: white;
-    text-align: center;
-    padding: 3px;
 }
 
 .changeColorPageElement {

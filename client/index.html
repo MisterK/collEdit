@@ -8,22 +8,24 @@
 </head>
 <body ng-app="colledit" ng-controller="CollEditController">
     <colledit-page></colledit-page>
-    <div class="controls">
-        <div class="addControls">
-            Add element of type:
-            <span class="elementTypeToAdd" ng-class="{elementTypeToAddSelected: nextPageElementType == 'svgText'}"
-                  ng-click="setNextPageElementType('svgText')">SVG text</span>
-            <span class="elementTypeToAdd" ng-class="{elementTypeToAddSelected: nextPageElementType == 'svgCircle'}"
-                  ng-click="setNextPageElementType('svgCircle')">SVG circle</span>
-            <span class="elementTypeToAdd" ng-class="{elementTypeToAddSelected: nextPageElementType == 'svgRect'}"
-                  ng-click="setNextPageElementType('svgRect')">SVG rectangle</span>
-        </div>
-        <hr />
-        <div class="otherControls">
-            <button class="deleteAllPageElements" ng-click="deleteAllPageElements()">Nuke!</button>
-        </div>
-    </div>
+    <div class="addElementHelpNotice">Double-click to add elements</div>
+    <colledit-add-page-element-dialog dialog-coordinates="addDialogCoordinates" add-callback="addPageElement(pageElementType, clickCoordinates, pageElementProperties)" delete-all-callback="deleteAllPageElements()"></colledit-add-page-element-dialog>
     <colledit-modify-page-element-dialog selected-page-element="selectedPageElement" update-callback="updatePageElement(pageElement)" delete-callback="deletePageElement(pageElement)"></colledit-modify-page-element-dialog>
+
+    <script type="text/ng-template" id="addControlsDialogTemplate">
+        <div class="addControlsDialog" ng-show="displayDialog" ng-style="addControlsDialogStyle">
+            <div class="addControls">
+                Add:
+                <span class="elementTypeToAdd" ng-click="addPageElementOfType('svgText')">SVG text</span>
+                <span class="elementTypeToAdd" ng-click="addPageElementOfType('svgCircle')">SVG circle</span>
+                <span class="elementTypeToAdd" ng-click="addPageElementOfType('svgRect')">SVG rectangle</span>
+            </div>
+            <hr />
+            <div class="deleteControls">
+                <button class="deleteAllPageElements" ng-click="deleteAllPageElements()">Nuke!</button>
+            </div>
+        </div>
+    </script>
 
     <script type="text/ng-template" id="modifyControlsDialogTemplate">
         <div class="modifyControlsDialog" ng-show="displayDialog" ng-style="modifyControlsDialogStyle">

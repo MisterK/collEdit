@@ -32,10 +32,15 @@ angular.module('colledit.directives', [])
                     .attr('class', 'clickableBackground')
                     .attr('width', presentationCfg.pageWidth)
                     .attr('height', presentationCfg.pageHeight)
-                    .on('click', function () {
+                    .on('click', function() {
+                        scope.$apply(function() {
+                            scope.handleBackgroundClick();
+                        });
+                    })
+                    .on('dblclick', function() {
                         var container = this;
-                        scope.$apply(function () {
-                            scope.handleBackgroundClick(d3.mouse(container));
+                        scope.$apply(function() {
+                            scope.handleBackgroundDoubleClick(d3.mouse(container));
                         });
                     });
         };
@@ -58,7 +63,7 @@ angular.module('colledit.directives', [])
 
         function selectPageElements(pageElementsGroup, cssSelection, data) {
             return pageElementsGroup.selectAll(cssSelection)
-                .data(data, function (d) { return d.pageElementId; });
+                .data(data, function(d) { return d.pageElementId; });
         }
 
         var drawPageElements = function(scope, pageElementsGroup, cssSelection, data) {
@@ -119,7 +124,7 @@ angular.module('colledit.directives', [])
 
     /* Directive: colleditModifyPageElementDialog
      * Goal: Creates the modify pageElement dialog
-     * Usage: <colledit-modify-page-element-dialog selected-page-element="selectedPageElement" update-callback="updatePageElement()" delete-callback="deletePageElement()"></colledit-modify-page-element-dialog>
+     * Usage: <colledit-modify-page-element-dialog selected-page-element="selectedPageElement" update-callback="updatePageElement(pageElement)" delete-callback="deletePageElement(pageElement)"></colledit-modify-page-element-dialog>
      * Params:
      * 		- selected-page-element (required): the selectedPageElement to update/delete.
      * 		- update-callback (required): the callback to call when the selectedPageElement is to be updated.
@@ -139,7 +144,7 @@ angular.module('colledit.directives', [])
                 'updateCallback': '&',
                 'deleteCallback': '&'
             },
-            link: function (scope, element) {
+            link: function(scope) {
                 scope.modifyControlsDialogStyle = {
                     top: '0px',
                     left: '0px'
@@ -150,7 +155,7 @@ angular.module('colledit.directives', [])
                 scope.$watch('selectedPageElement', function(newValue, oldValue) {
                     scope.displayDialog = angular.isObject(newValue);
                     if (angular.isObject(newValue) && newValue !== oldValue) {
-                        scope.modifyControlsDialogStyle.left = (newValue.centerX - 81) + "px";
+                        scope.modifyControlsDialogStyle.left = Math.max(0, newValue.centerX - 81) + "px";
                         scope.modifyControlsDialogStyle.top = (newValue.centerY + 20) + "px";
                         if (scope.isTextualPageElement(newValue)) {
                             scope.textContentsInput = newValue.contents;
@@ -198,6 +203,63 @@ angular.module('colledit.directives', [])
                         scope.deleteCallback({pageElement: scope.selectedPageElement});
                     }
                 };
+            }
+        };
+    })
+
+    /* Directive: colleditAddPageElementDialog
+     * Goal: Creates the add pageElement dialog
+     * Usage: <colledit-add-page-element-dialog dialog-coordinates="addDialogCoordinates" add-callback="addPageElement(pageElementType, clickCoordinates, pageElementProperties)" delete-all-callback="deleteAllPageElements()"></colledit-add-page-element-dialog>
+     * Params:
+     * 		- dialog-coordinates (required): The coordinates of the click that originated the dialog display.
+     * 		- add-callback (required): the callback to call when a pageElement is to be added.
+     * 		- delete-all-callback (required): the callback to call when all pageElements are to be deleted.
+     * Dependencies:
+     *  - logService: to log on add or deleteAll operations
+     * Description: Creates the add pageElement dialog
+     */
+    .directive('colleditAddPageElementDialog', function(logService) {
+        return {
+            restrict: 'E',
+            templateUrl: 'addControlsDialogTemplate',
+            replace: true,
+            scope: {
+                'dialogCoordinates': '=',
+                'addCallback': '&',
+                'deleteAllCallback': '&'
+            },
+            link: function(scope) {
+                scope.displayDialog = false;
+                scope.addControlsDialogStyle = {
+                    top: '0px',
+                    left: '0px'
+                };
+                scope.pageElementProperties = {};
+
+                scope.$watch('dialogCoordinates', function(newValue, oldValue) {
+                    if (angular.isArray(newValue) && newValue.length >= 2 && newValue !== oldValue) {
+                        scope.addControlsDialogStyle.left = Math.max(0, newValue[0] - 150) + "px";
+                        scope.addControlsDialogStyle.top = Math.max(0, newValue[1] - 30) + "px";
+                        scope.displayDialog = true;
+                    } else if (!angular.isArray(newValue) || newValue.length < 2) {
+                        scope.displayDialog = false;
+                    }
+                });
+
+                scope.addPageElementOfType = function(pageElementType) {
+                    if (angular.isFunction(scope.addCallback)
+                        && angular.isArray(scope.dialogCoordinates) && scope.dialogCoordinates.length >= 2) {
+                        scope.addCallback({ pageElementType: pageElementType, clickCoordinates: scope.dialogCoordinates,
+                                pageElementProperties: scope.pageElementProperties});
+                    }
+                };
+
+                scope.deleteAllPageElements = function() {
+                    if (angular.isFunction(scope.deleteAllCallback)) {
+                        logService.logDebug('Deleting all elements');
+                        scope.deleteAllCallback();
+                    }
+                }
             }
         };
     });
