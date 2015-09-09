@@ -7,11 +7,13 @@ angular.module('colledit.directives', [])
      * Goal: Creates the main colleditPage graphics
      * Usage: <colledit-page></colledit-page>
      * Dependencies:
+     *  - presentationCfg: to access the global presentation configuration
      *  - d3Service: to access the d3 library object
+     *  - d3ComponentFactoryService: to create or update pageElements
+     *  - d3TransitionsService: to trigger D3 transition animations
      * Description: Creates the main colleditPage with D3
      */
-    .directive('colleditPage', function(presentationCfg, dataCfg, d3Service,
-                                        d3ComponentFactoryService, d3TransitionsService) {
+    .directive('colleditPage', function(presentationCfg, d3Service, d3ComponentFactoryService, d3TransitionsService) {
         var d3 = d3Service.d3;
 
         var createRootSvgElement = function(rootElement) {
@@ -113,4 +115,89 @@ angular.module('colledit.directives', [])
                 });
             }
         }
+    })
+
+    /* Directive: colleditModifyPageElementDialog
+     * Goal: Creates the modify pageElement dialog
+     * Usage: <colledit-modify-page-element-dialog selected-page-element="selectedPageElement" update-callback="updatePageElement()" delete-callback="deletePageElement()"></colledit-modify-page-element-dialog>
+     * Params:
+     * 		- selected-page-element (required): the selectedPageElement to update/delete.
+     * 		- update-callback (required): the callback to call when the selectedPageElement is to be updated.
+     * 		- delete-callback (required): the callback to call when the selectedPageElement is to be deleted.
+     * Dependencies:
+     *  - dataCfg: to access the global data configuration
+     *  - logService: to log on pageElementUpdate
+     * Description: Creates the modify pageElement dialog
+     */
+    .directive('colleditModifyPageElementDialog', function(dataCfg, logService) {
+        return {
+            restrict: 'E',
+            templateUrl: 'modifyControlsDialogTemplate',
+            replace: true,
+            scope: {
+                'selectedPageElement': '=',
+                'updateCallback': '&',
+                'deleteCallback': '&'
+            },
+            link: function (scope, element) {
+                scope.modifyControlsDialogStyle = {
+                    top: '0px',
+                    left: '0px'
+                };
+                scope.textContentsInput = '';
+                scope.displayDialog = false;
+
+                scope.$watch('selectedPageElement', function(newValue, oldValue) {
+                    scope.displayDialog = angular.isObject(newValue);
+                    if (angular.isObject(newValue) && newValue !== oldValue) {
+                        scope.modifyControlsDialogStyle.left = (newValue.centerX - 81) + "px";
+                        scope.modifyControlsDialogStyle.top = (newValue.centerY + 20) + "px";
+                        if (scope.isTextualPageElement(newValue)) {
+                            scope.textContentsInput = newValue.contents;
+                        }
+                    } else if (!angular.isObject(newValue)) {
+                        scope.textContentsInput = '';
+                    }
+                });
+
+                scope.isTextualPageElement = function(pageElement) {
+                    pageElement = pageElement || scope.selectedPageElement;
+                    return angular.isObject(pageElement) && pageElement.isTextual;
+                };
+
+                var updateProperty = function(propertyName, propertyValue) {
+                    scope.selectedPageElement.updateProperty(propertyName, propertyValue);
+                    if (angular.isFunction(scope.updateCallback)) {
+                        scope.updateCallback({pageElement: scope.selectedPageElement});
+                    }
+                };
+
+                scope.togglePageElementProperty = function(propertyName) {
+                    if (angular.isObject(scope.selectedPageElement)) {
+                        logService.logDebug('Toggling property "' + propertyName + '" of element "' +
+                            scope.selectedPageElement.pageElementId + '" of type ' +
+                            scope.selectedPageElement.pageElementType);
+                        updateProperty(propertyName, dataCfg.togglePropertyValue);
+                    }
+                };
+
+                scope.updatePageElementProperty = function(propertyName, propertyValue) {
+                    if (angular.isObject(scope.selectedPageElement)) {
+                        logService.logDebug('Updating property "' + propertyName + '" to "' + propertyValue +
+                            '" of element "' + scope.selectedPageElement.pageElementId + '" of type ' +
+                            scope.selectedPageElement.pageElementType);
+                        updateProperty(propertyName, propertyValue);
+                    }
+                };
+
+                scope.deletePageElement = function() {
+                    if (angular.isObject(scope.selectedPageElement)
+                        && angular.isFunction(scope.deleteCallback)) {
+                        logService.logDebug('Deleting element "' + scope.selectedPageElement.pageElementId +
+                            '" of type ' + scope.selectedPageElement.pageElementType);
+                        scope.deleteCallback({pageElement: scope.selectedPageElement});
+                    }
+                };
+            }
+        };
     });

@@ -5,20 +5,6 @@
     <title>CollEdit</title>
 
     <link href="resources/css/main.css" rel="stylesheet"/>
-
-    <script type="text/javascript" src="resources/js/libs/lodash-v2.4.1.js"></script>
-    <script type="text/javascript" src="resources/js/libs/angular-1.2.16.js"></script>
-    <script type="text/javascript" src="resources/js/libs/d3-v3.4.7.js"></script>
-    <script type="text/javascript" src="resources/js/libs/lawnchair-0.6.1.js"></script>
-
-    <script type="text/javascript" src="resources/js/mainApp.js"></script>
-    <script type="text/javascript" src="resources/js/services/persistenceServices.js"></script>
-    <script type="text/javascript" src="resources/js/services/dataServices.js"></script>
-    <script type="text/javascript" src="resources/js/services/ioServices.js"></script>
-    <script type="text/javascript" src="resources/js/services/d3Services.js"></script>
-    <script type="text/javascript" src="resources/js/services/logServices.js"></script>
-    <script type="text/javascript" src="resources/js/controllers/controllers.js"></script>
-    <script type="text/javascript" src="resources/js/directives/directives.js"></script>
 </head>
 <body ng-app="colledit" ng-controller="CollEditController">
     <colledit-page></colledit-page>
@@ -37,23 +23,42 @@
             <button class="deleteAllPageElements" ng-click="deleteAllPageElements()">Nuke!</button>
         </div>
     </div>
-    <div class="modifyControlsDialog" ng-show="selectedPageElement" ng-style="modifyControlsDialogStyle">
-        Modify selected element:
-        <div class="updateControls">
-            <div class="generalUpdateControls">
-                <button class="changeColorPageElement" ng-click="togglePageElementProperty('fill')">&nbsp;</button>
-                <button class="changeSizePageElement" ng-click="togglePageElementSize()">A&uparrow;</button>
-                <button class="deletePageElement" ng-click="deletePageElement()">&cross;</button>
-            </div>
-            <div class="textualUpdateControls" ng-show="isTextualPageElement()">
-                <hr />
-                <button class="changeFontStylePageElement" ng-click="togglePageElementProperty('fontStyle')">I</button>
-                <button class="changeFontWeightPageElement" ng-click="togglePageElementProperty('fontWeight')">B</button>
-                <button class="changeTextDecorationPageElement" ng-click="togglePageElementProperty('textDecoration')">U</button><br />
-                &#9998;: <input type="text" ng-model="textContentsInput" ng-blur="changeTextPageElementsContents()" />
+    <colledit-modify-page-element-dialog selected-page-element="selectedPageElement" update-callback="updatePageElement(pageElement)" delete-callback="deletePageElement(pageElement)"></colledit-modify-page-element-dialog>
+
+    <script type="text/ng-template" id="modifyControlsDialogTemplate">
+        <div class="modifyControlsDialog" ng-show="displayDialog" ng-style="modifyControlsDialogStyle">
+            Modify selected element:
+            <div class="updateControls">
+                <div class="generalUpdateControls">
+                    <button class="changeColorPageElement" ng-click="togglePageElementProperty('fill')">&nbsp;</button>
+                    <button class="changeSizePageElement" ng-click="togglePageElementProperty('size')">A&uparrow;</button>
+                    <button class="deletePageElement" ng-click="deletePageElement()">&cross;</button>
+                </div>
+                <div class="textualUpdateControls" ng-show="isTextualPageElement()">
+                    <hr />
+                    <button class="changeFontStylePageElement" ng-click="togglePageElementProperty('fontStyle')">I</button>
+                    <button class="changeFontWeightPageElement" ng-click="togglePageElementProperty('fontWeight')">B</button>
+                    <button class="changeTextDecorationPageElement" ng-click="togglePageElementProperty('textDecoration')">U</button><br />
+                    &#9998;: <input type="text" ng-model="textContentsInput" ng-blur="updatePageElementProperty('contents', textContentsInput)" />
+                </div>
             </div>
         </div>
-    </div>
+    </script>
+
+    <script type="text/javascript" src="resources/js/libs/lodash-v2.4.1.js"></script>
+    <script type="text/javascript" src="resources/js/libs/angular-1.2.16.js"></script>
+    <script type="text/javascript" src="resources/js/libs/d3-v3.4.7.js"></script>
+    <script type="text/javascript" src="resources/js/libs/lawnchair-0.6.1.js"></script>
+
+    <script type="text/javascript" src="resources/js/mainApp.js"></script>
+    <script type="text/javascript" src="resources/js/services/persistenceServices.js"></script>
+    <script type="text/javascript" src="resources/js/services/dataServices.js"></script>
+    <script type="text/javascript" src="resources/js/services/ioServices.js"></script>
+    <script type="text/javascript" src="resources/js/services/d3Services.js"></script>
+    <script type="text/javascript" src="resources/js/services/logServices.js"></script>
+    <script type="text/javascript" src="resources/js/controllers/controllers.js"></script>
+    <script type="text/javascript" src="resources/js/directives/directives.js"></script>
+
 	<script src="/socket.io/socket.io.js"></script>
 </body>
 </html>

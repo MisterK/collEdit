@@ -3,17 +3,12 @@
 /**** Angular controllers ****/
 
 angular.module('colledit.controllers', [])
-    .controller('CollEditController', function($scope, pageElementsFactory, persistenceService, dataCfg, logService,
+    .controller('CollEditController', function($scope, pageElementsFactory, persistenceService, logService,
                                                doPageElementsIdsMatch) {
         $scope.nextPageElementType = undefined;
         $scope.pageElements = [];
         $scope.selectedPageElement = undefined;
         $scope.pageElementProperties = {};
-        $scope.modifyControlsDialogStyle = {
-            top: '0px',
-            left: '0px'
-        };
-        $scope.textContentsInput = '';
 
         $scope.setNextPageElementType = function(nextPageElementType) {
             $scope.nextPageElementType = nextPageElementType;
@@ -39,22 +34,10 @@ angular.module('colledit.controllers', [])
             }
         };
 
-        var displayModifyControlsDialog = function(pageElement) {
-            pageElement = pageElement || $scope.selectedPageElement;
-            if (angular.isDefined(pageElement)) {
-                $scope.modifyControlsDialogStyle.left = (pageElement.centerX - 81) + "px";
-                $scope.modifyControlsDialogStyle.top = (pageElement.centerY + 20) + "px";
-            }
-        };
-
         var selectPageElement = function(pageElement) {
             clearPageElementSelectionAndRefresh();
             $scope.selectedPageElement = pageElement;
             $scope.nextPageElementType = undefined;
-            if ($scope.isTextualPageElement(pageElement)) {
-                $scope.textContentsInput = pageElement.contents;
-            }
-            displayModifyControlsDialog(pageElement);
         };
 
         $scope.selectPageElementAndRefresh = function(pageElement) {
@@ -66,7 +49,6 @@ angular.module('colledit.controllers', [])
             var previouslySelectedElement = angular.isObject($scope.selectedPageElement) ?
                 $scope.selectedPageElement : undefined;
             $scope.selectedPageElement = undefined;
-            $scope.textContentsInput = '';
             return previouslySelectedElement;
         };
 
@@ -86,49 +68,15 @@ angular.module('colledit.controllers', [])
             return isPageElementSelectedId(pageElement.pageElementId);
         };
 
-        $scope.isTextualPageElement = function(pageElement) {
-            pageElement = pageElement || $scope.selectedPageElement;
-            return angular.isDefined(pageElement) && pageElement.isTextual;
-        };
-
-        $scope.togglePageElementProperty = function(propertyName, pageElement) {
-            pageElement = pageElement || $scope.selectedPageElement;
+        $scope.updatePageElement = function(pageElement) {
             if (angular.isDefined(pageElement)) {
-                logService.logDebug('Toggling property "' + propertyName + '" of element "' +
-                    pageElement.pageElementId + '" of type ' + pageElement.pageElementType);
-                pageElement.toggleProperty(propertyName);
-                pageElementUpdated(pageElement);
-            }
-        };
-
-        $scope.togglePageElementSize = function(pageElement) {
-            pageElement = pageElement || $scope.selectedPageElement;
-            if (angular.isDefined(pageElement)
-                && angular.isFunction(pageElement.toggleSize)) {
-                logService.logDebug('Toggling size of element "' + pageElement.pageElementId +
-                    '" of type ' + pageElement.pageElementType);
-                pageElement.toggleSize();
-                pageElementUpdated(pageElement);
-            }
-        };
-
-        $scope.changeTextPageElementsContents = function(pageElement) {
-            pageElement = pageElement || $scope.selectedPageElement;
-            if (angular.isDefined(pageElement) && angular.isDefined($scope.textContentsInput)
-                && angular.isFunction(pageElement.changeTextContents)) {
-                logService.logDebug('Changing text contents of element "' + pageElement.pageElementId +
-                    '" of type ' + pageElement.pageElementType);
-                pageElement.changeTextContents($scope.textContentsInput);
-                pageElementUpdated(pageElement);
-                $scope.textContentsInput = '';
+                persistPageElement(pageElement);
+                requirePageElementDisplayRefresh(pageElement);
             }
         };
 
         $scope.deletePageElement = function(pageElement) {
-            pageElement = pageElement || $scope.selectedPageElement;
             if (angular.isDefined(pageElement)) {
-                logService.logDebug('Deleting element "' + pageElement.pageElementId +
-                    '" of type ' + pageElement.pageElementType);
                 persistence.deletePageElement(pageElement);
             }
         };
@@ -230,10 +178,5 @@ angular.module('colledit.controllers', [])
 
         var requirePageElementDisplayRemoval = function(deletedPageElementId) {
             $scope.$broadcast('pageElementDeleted', deletedPageElementId);
-        };
-
-        var pageElementUpdated = function(pageElement) {
-            persistPageElement(pageElement);
-            requirePageElementDisplayRefresh(pageElement);
         };
     });

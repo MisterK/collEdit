@@ -26,7 +26,8 @@ angular.module('colledit.dataAngularServices', [])
             },
             sizeMultipliers: [0.5, 0.75, 1, 1.5, 2, 5]
         },
-        pageElementTypes: ['svgText', 'svgCircle', 'svgRect']
+        pageElementTypes: ['svgText', 'svgCircle', 'svgRect'],
+        togglePropertyValue: '__TOGGLE__'
     })
     .constant('doPageElementsIdsMatch', function (pageElementOrId1, pageElementOrId2) {
         var pageElementId1 = angular.isObject(pageElementOrId1) ? pageElementOrId1.pageElementId : pageElementOrId1;
@@ -105,8 +106,25 @@ angular.module('colledit.dataAngularServices', [])
                 this.togglableProperties.push.apply(this.togglableProperties, params.togglableProperties);
             }
             this.isTextual = angular.isDefined(params.isTextual) ? params.isTextual : false;
+            this.aliasedProperties = {};
+            if (angular.isObject(params.aliasedProperties)) {
+                this.aliasedProperties = _.extend(this.aliasedProperties, params.aliasedProperties);
+            }
 
             return this;
+        };
+
+        PageElement.prototype.updateProperty = function(originalPropertyName, propertyValue) {
+            var propertiesToUpdate = angular.isArray(this.aliasedProperties[originalPropertyName])
+                ? this.aliasedProperties[originalPropertyName] : [originalPropertyName];
+            _.forEach(propertiesToUpdate, function(propertyName) {
+                if (dataCfg.togglePropertyValue === propertyValue) {
+                    this.toggleProperty(propertyName);
+                } else {
+                    //TODO validate it's an expected propertyName?
+                    this[propertyName] = propertyValue;
+                }
+            }, this);
         };
 
         PageElement.prototype.toggleProperty = function(propertyName) {
@@ -118,8 +136,8 @@ angular.module('colledit.dataAngularServices', [])
             } else {
                 var defaultValue = dataCfg.pageElements.propertiesDefaults[propertyName];
                 if (angular.isDefined(defaultValue)) {
-                        this[propertyName] = shiftInArray(dataCfg.pageElements.sizeMultipliers,
-                            Math.round(this[propertyName] / defaultValue)) * defaultValue;
+                    this[propertyName] = shiftInArray(dataCfg.pageElements.sizeMultipliers,
+                        Math.round(this[propertyName] / defaultValue)) * defaultValue;
                 }
             }
         };
@@ -130,7 +148,8 @@ angular.module('colledit.dataAngularServices', [])
 
                 var newParams = _.extend({
                     togglableProperties: ['fontSize', 'fontWeight', 'fontStyle', 'textDecoration'],
-                    isTextual: true
+                    isTextual: true,
+                    aliasedProperties: {'size': ['fontSize']}
                 }, params);
 
                 return [coordinates, newParams];
@@ -148,20 +167,13 @@ angular.module('colledit.dataAngularServices', [])
             }
         );
 
-        TextPageElement.prototype.toggleSize = function() {
-            this.toggleProperty('fontSize');
-        };
-
-        TextPageElement.prototype.changeTextContents = function(newContents) {
-            this.contents = newContents;
-        };
-
         var CirclePageElement = oooInherit(PageElement,
             function(coordinates, params) {
                 this.pageElementType = 'svgCircle';
 
                 var newParams =_.extend({
-                    togglableProperties: ['radius']
+                    togglableProperties: ['radius'],
+                    aliasedProperties: {'size': ['radius']}
                 }, params);
 
                 return [coordinates, newParams];
@@ -174,10 +186,6 @@ angular.module('colledit.dataAngularServices', [])
                 return this;
             }
         );
-
-        CirclePageElement.prototype.toggleSize = function() {
-            this.toggleProperty('radius');
-        };
 
         var RectanglePageElement = oooInherit(PageElement,
             function(coordinates, params) {
@@ -194,7 +202,8 @@ angular.module('colledit.dataAngularServices', [])
                 }
 
                 var newParams = _.extend({
-                    togglableProperties: ['width', 'height']
+                    togglableProperties: ['width', 'height'],
+                    aliasedProperties: {'size': ['width', 'height']}
                 }, params);
 
                 return [coordinates, newParams];
@@ -203,9 +212,4 @@ angular.module('colledit.dataAngularServices', [])
                 return this;
             }
         );
-
-        RectanglePageElement.prototype.toggleSize = function() {
-            this.toggleProperty('width');
-            this.toggleProperty('height');
-        };
     });
