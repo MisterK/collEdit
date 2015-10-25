@@ -27,7 +27,9 @@ angular.module('colledit.persistenceServices', [])
         };
 
         this.savePageElement = function(pageElement, callback) {
-            lawnchairStorage.save(pageElement, callback);
+            lawnchairStorage.save(
+                angular.isFunction(pageElement.getPersistableObject) ? pageElement.getPersistableObject() : pageElement,
+                callback);
         };
 
         this.deletePageElement = function(pageElementToDeleteId, callback) {

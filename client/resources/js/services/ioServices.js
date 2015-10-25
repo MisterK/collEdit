@@ -87,12 +87,14 @@ angular.module('colledit.ioAngularServices', [])
             };
 
             this.savePageElement = function(pageElement, successCallback, errorCallback) {
-                emitEvent('savePageElement', pageElement, function(response) {
-                    if (response.status == 200) {
-                        (successCallback || _.noop)();
-                    } else {
-                        (errorCallback || _.noop)(response.status, response.message);
-                    }
+                emitEvent('savePageElement',
+                    angular.isFunction(pageElement.getPersistableObject) ? pageElement.getPersistableObject() : pageElement,
+                    function(response) {
+                        if (response.status == 200) {
+                            (successCallback || _.noop)();
+                        } else {
+                            (errorCallback || _.noop)(response.status, response.message);
+                        }
                 });
             };
 

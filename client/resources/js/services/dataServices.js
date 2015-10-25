@@ -46,16 +46,23 @@ angular.module('colledit.dataAngularServices', [])
             }
         };
 
+        var assignAndMixin = function(pageElement, typeObject) {
+            _.assign(pageElement, typeObject, function(value, other) {
+                return angular.isUndefined(value) && angular.isDefined(other) ? other : value;
+            });
+            _.mixin(pageElement, typeObject);
+        };
+
         this.augmentPageElement = function(pageElement) {
             switch (pageElement.pageElementType) {
                 case 'svgText':
-                    _.mixin(pageElement, new TextPageElement);
+                    assignAndMixin(pageElement, new TextPageElement());
                     break;
                 case 'svgCircle':
-                    _.mixin(pageElement, new CirclePageElement);
+                    assignAndMixin(pageElement, new CirclePageElement());
                     break;
                 case 'svgRect':
-                    _.mixin(pageElement, new RectanglePageElement);
+                    assignAndMixin(pageElement, new RectanglePageElement());
                     break;
             }
         };
@@ -90,6 +97,22 @@ angular.module('colledit.dataAngularServices', [])
         };
 
         var PageElement = function(coordinates, params) {
+            //Transient properties
+            this.transientPropertiesNames = ['transientPropertiesNames', 'togglableProperties',
+                'isTextual', 'aliasedProperties'];
+            if (angular.isArray(params.transientPropertiesNames)) {
+                this.transientPropertiesNames.push.apply(this.transientPropertiesNames, params.transientPropertiesNames);
+            }
+            this.togglableProperties = ['fill'];
+            if (angular.isArray(params.togglableProperties)) {
+                this.togglableProperties.push.apply(this.togglableProperties, params.togglableProperties);
+            }
+            this.isTextual = angular.isDefined(params.isTextual) ? params.isTextual : false;
+            this.aliasedProperties = {};
+            if (angular.isObject(params.aliasedProperties)) {
+                this.aliasedProperties = _.extend(this.aliasedProperties, params.aliasedProperties);
+            }
+
             if (!angular.isDefined(coordinates) || !angular.isDefined(params)) {
                 return this;
             }
@@ -100,15 +123,6 @@ angular.module('colledit.dataAngularServices', [])
             this.x = coordinates[0];
             this.y = coordinates[1];
             this.fill = dataCfg.pageElements.defaultFill;
-            this.togglableProperties = ['fill'];
-            if (angular.isArray(params.togglableProperties)) {
-                this.togglableProperties.push.apply(this.togglableProperties, params.togglableProperties);
-            }
-            this.isTextual = angular.isDefined(params.isTextual) ? params.isTextual : false;
-            this.aliasedProperties = {};
-            if (angular.isObject(params.aliasedProperties)) {
-                this.aliasedProperties = _.extend(this.aliasedProperties, params.aliasedProperties);
-            }
 
             return this;
         };
@@ -139,6 +153,10 @@ angular.module('colledit.dataAngularServices', [])
                         Math.round(this[propertyName] / defaultValue)) * defaultValue;
                 }
             }
+        };
+
+        PageElement.prototype.getPersistableObject = function() {
+            return _.omit(this, this.transientPropertiesNames || []);
         };
 
         var TextPageElement = oooInherit(PageElement,

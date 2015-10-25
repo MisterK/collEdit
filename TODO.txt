@@ -19,7 +19,6 @@ CODE IMPROVEMENTS
 
 BUGS
 ----------
-- Do not persist non-dynamic pageElement properties on server (have to re-set them on augmentPageElement)
 
 DONE
 ---------
@@ -53,6 +52,7 @@ DONE
     - Create framework for updating vs. toggling properties
 - Handle toggleSize specifics inside dataServices.js, instead of controllers.js (aliasedProperties)
 - Use directive for addControls dialog & potentially make it floating (appear on double-click on background?)
+- Do not persist non-dynamic pageElement properties on server (have to re-set them on augmentPageElement)
 
 NOTES
 ---------
